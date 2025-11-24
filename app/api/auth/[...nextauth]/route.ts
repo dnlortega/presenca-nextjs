@@ -46,6 +46,10 @@ export const authOptions: NextAuthOptions = {
   ],
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -63,6 +67,10 @@ export const authOptions: NextAuthOptions = {
     }
   }
 };
+
+if (!process.env.NEXTAUTH_SECRET) {
+  console.warn("⚠️ NEXTAUTH_SECRET não está definido! O login falhará em produção.");
+}
 
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
