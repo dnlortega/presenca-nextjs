@@ -216,19 +216,31 @@ export default function AdminClient() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
                       <input
                         required
+                        list="companies-list"
                         className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none"
                         value={empForm.empresa}
                         onChange={e => setEmpForm({ ...empForm, empresa: e.target.value })}
                       />
+                      <datalist id="companies-list">
+                        {Array.from(new Set(employees.map(e => e.empresa))).sort().map((company) => (
+                          <option key={company} value={company} />
+                        ))}
+                      </datalist>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
                       <input
                         required
+                        list="sectors-list"
                         className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-cyan-500 outline-none"
                         value={empForm.setor}
                         onChange={e => setEmpForm({ ...empForm, setor: e.target.value })}
                       />
+                      <datalist id="sectors-list">
+                        {Array.from(new Set(employees.map(e => e.setor))).sort().map((sector) => (
+                          <option key={sector} value={sector} />
+                        ))}
+                      </datalist>
                     </div>
                     <div className="flex justify-end gap-3 mt-6">
                       <button type="button" onClick={() => setIsEmpModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
