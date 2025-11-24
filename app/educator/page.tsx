@@ -1,0 +1,11 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../api/auth/[...nextauth]/route';
+import { redirect } from 'next/navigation';
+import EducatorClient from '../../components/EducatorClient';
+
+export default async function EducatorPage() {
+  const session = await getServerSession(authOptions as any);
+  const s: any = session;
+  if (!s || !['educador', 'admin'].includes(s?.user?.role)) redirect('/login');
+  return <EducatorClient />;
+}
