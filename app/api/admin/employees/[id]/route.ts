@@ -3,12 +3,13 @@ import prisma from '../../../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions as any);
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const id = parseInt(params.id);
+        const { id: idStr } = await params;
+        const id = parseInt(idStr);
         const body = await req.json();
         const { nome, empresa, setor } = body;
 
@@ -23,12 +24,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions as any);
         if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const id = parseInt(params.id);
+        const { id: idStr } = await params;
+        const id = parseInt(idStr);
 
         await prisma.funcionarios.delete({
             where: { id },
