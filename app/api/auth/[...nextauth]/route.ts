@@ -13,18 +13,34 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials) return null;
-        const { username, password } = credentials as { username: string; password: string };
+        try {
+          if (!credentials) return null;
+          const { username, password } = credentials as { username: string; password: string };
 
-        const cleanUsername = username.trim();
-        const cleanPassword = password.trim();
+          const cleanUsername = username.trim();
+          const cleanPassword = password.trim();
 
-        // Look up user in the introspected `usuarios` table
-        const user = await prisma.usuarios.findUnique({ where: { username: cleanUsername } });
-        if (!user) return null;
-        const match = await bcrypt.compare(cleanPassword, user.password_hash);
-        if (!match) return null;
-        return { id: user.id.toString(), name: user.username, role: user.role } as any;
+          console.log('Tentando login para:', cleanUsername);
+
+          // Look up user in the introspected `usuarios` table
+          const user = await prisma.usuarios.findUnique({ where: { username: cleanUsername } });
+
+          if (!user) {
+            console.log('Usuário não encontrado:', cleanUsername);
+            return null;
+          }
+
+          const match = await bcrypt.compare(cleanPassword, user.password_hash);
+          if (!match) {
+            console.log('Senha incorreta para:', cleanUsername);
+            return null;
+          }
+
+          return { id: user.id.toString(), name: user.username, role: user.role } as any;
+        } catch (error) {
+          console.error('Erro no authorize:', error);
+          return null;
+        }
       }
     })
   ],
