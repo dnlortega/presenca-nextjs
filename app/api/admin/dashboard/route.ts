@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import prisma from '../../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Helper for Sao Paulo date (same as in attendance route)
 function getSaoPauloDate() {
