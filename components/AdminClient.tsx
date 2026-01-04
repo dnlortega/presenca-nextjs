@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { signOut } from 'next-auth/react';
 import {
   LucideUsers,
   LucideBarChart,
@@ -17,8 +16,12 @@ import {
   LucideUserCheck,
   LucideClock,
   LucideMail,
-  LucideBuilding
+  LucideBuilding,
+  LucidePanelLeftClose,
+  LucidePanelLeftOpen,
+  LucideUser
 } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
@@ -69,7 +72,9 @@ type Company = {
 };
 
 export default function AdminClient() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -601,76 +606,140 @@ export default function AdminClient() {
   };
 
   return (
-    <div className="min-h-screen lg:flex">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-border bg-card/30 backdrop-blur-xl hidden lg:block p-6">
-        <div className="sticky top-6 flex flex-col h-[calc(100vh-48px)]">
-          <div className="mb-8 flex items-center justify-between animate-float">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
-                <LucideShieldCheck className="w-5 h-5" />
-              </div>
-              <span className="font-black text-lg tracking-tighter uppercase">Presença<span className="text-primary">.Pro</span></span>
-            </div>
-          </div>
+    <div className="min-h-screen bg-muted/30 lg:flex p-2 gap-2 overflow-hidden">
+      {/* Sidebar - Shadcn Inset Style */}
+      <aside className={`shrink-0 bg-background/60 backdrop-blur-xl hidden lg:flex flex-col rounded-2xl border border-border/50 shadow-sm overflow-hidden relative transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-[80px] p-4' : 'w-64 p-6'}`}>
 
-          <nav className="flex-1 space-y-1">
+        {/* Toggle Button */}
+        <button
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          className="absolute -right-0 top-12 bg-primary text-primary-foreground w-5 h-10 rounded-l-md flex items-center justify-center shadow-lg hover:w-6 transition-all z-50"
+        >
+          {isSidebarCollapsed ? <LucidePanelLeftOpen className="w-3 h-3" /> : <LucidePanelLeftClose className="w-3 h-3" />}
+        </button>
+
+        {/* Logo Section */}
+        <div className={`mb-8 flex items-center gap-2.5 transition-all ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-8 h-8 bg-primary rounded-lg shrink-0 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 animate-float">
+            <LucideShieldCheck className="w-5 h-5" />
+          </div>
+          {!isSidebarCollapsed && (
+            <span className="font-black text-lg tracking-tighter uppercase whitespace-nowrap animate-in fade-in slide-in-from-left-2">
+              Presença<span className="text-primary italic">.Pro</span>
+            </span>
+          )}
+        </div>
+
+        {/* User Profile Section */}
+        <div className={`mb-6 p-2 rounded-xl bg-primary/5 border border-primary/10 flex items-center gap-3 overflow-hidden transition-all ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+          <Avatar className="h-8 w-8 rounded-lg shrink-0 border border-primary/20">
+            {session?.user?.image ? (
+              <AvatarImage src={session.user.image} alt={session.user.name || ''} />
+            ) : (
+              <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-black">
+                {session?.user?.name?.substring(0, 2).toUpperCase() || 'AD'}
+              </AvatarFallback>
+            )}
+          </Avatar>
+          {!isSidebarCollapsed && (
+            <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2">
+              <span className="text-[10px] font-black truncate leading-tight uppercase">{session?.user?.name || 'Administrador'}</span>
+              <span className="text-[9px] text-muted-foreground truncate leading-tight">{session?.user?.email || 'admin@presenca.pro'}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Primary Navigation */}
+        <div className="flex-1 space-y-6 overflow-y-auto pr-1 custom-scrollbar overflow-x-hidden">
+          <div className="space-y-1">
+            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed ? 'text-center ml-0' : ''}`}>
+              {isSidebarCollapsed ? '•' : 'Principal'}
+            </h3>
             {[
               { id: 'overview', label: 'Dashboard', icon: LucideLayoutDashboard },
               { id: 'companies', label: 'Empresas', icon: LucideBuilding },
               { id: 'employees', label: 'Funcionários', icon: LucideUsers },
               { id: 'users', label: 'Acessos', icon: LucideUserCheck },
-              { id: 'reports', label: 'Relatórios', icon: LucideFileText },
-              { id: 'settings', label: 'Configurações', icon: LucideSettings }
             ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id as Tab)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === item.id
-                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/10'
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === item.id
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  }`}
+                  } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                title={isSidebarCollapsed ? item.label : ''}
               >
-                <item.icon className="w-4 h-4" />
-                {item.label}
+                <item.icon className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
               </button>
             ))}
-          </nav>
+          </div>
 
-          <div className="space-y-4 pt-4 border-t border-border/50">
-            <div className="flex items-center justify-between px-3">
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Tema</span>
+          {/* Secondary Navigation */}
+          <div className="space-y-1">
+            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed ? 'text-center ml-0' : ''}`}>
+              {isSidebarCollapsed ? '•' : 'Sistema'}
+            </h3>
+            {[
+              { id: 'reports', label: 'Relatórios', icon: LucideFileText },
+              { id: 'settings', label: 'Configurações', icon: LucideSettings },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as Tab)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === item.id
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  } ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                title={isSidebarCollapsed ? item.label : ''}
+              >
+                <item.icon className="w-4 h-4 shrink-0" />
+                {!isSidebarCollapsed && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="pt-6 mt-6 border-t border-border/50 space-y-4 shrink-0">
+          {!isSidebarCollapsed && (
+            <div className="flex items-center justify-between px-2 animate-in fade-in zoom-in-95">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-[8px]">Dark Mode</span>
               <ModeToggle />
             </div>
-            <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
-            >
-              <LucideLogOut className="w-4 h-4" />
-              Sair
-            </button>
-          </div>
+          )}
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title={isSidebarCollapsed ? 'Sair' : ''}
+          >
+            <LucideLogOut className="w-4 h-4 shrink-0 group-hover:rotate-180 transition-transform duration-500" />
+            {!isSidebarCollapsed && <span className="animate-in fade-in slide-in-from-left-2">Sair do Sistema</span>}
+          </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 min-w-0 bg-background/50">
-        <div className="max-w-6xl mx-auto p-6 lg:p-10">
-          <header className="mb-8 flex justify-between items-end">
-            <div>
-              <h1 className="flex items-center gap-2 uppercase tracking-tighter">
-                {activeTab === 'overview' && 'Dashboard Central'}
-                {activeTab === 'companies' && 'Gestão de Empresas'}
-                {activeTab === 'employees' && 'Base de Colaboradores'}
-                {activeTab === 'users' && 'Controle de Acessos'}
-                {activeTab === 'reports' && 'Inteligência de Dados'}
-                {activeTab === 'settings' && 'Ajustes do Sistema'}
-              </h1>
-              <p className="text-muted-foreground text-xs font-medium mt-1">Gerenciamento inteligente de presença e frequência.</p>
-            </div>
-          </header>
+      {/* Main Content (Inset) */}
+      <main className="flex-1 min-w-0 bg-background rounded-2xl border border-border/50 shadow-sm overflow-hidden flex flex-col relative transition-all duration-500">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="max-w-6xl mx-auto p-6 lg:p-10">
+            <header className="mb-8 flex justify-between items-end animate-slide-up">
+              <div>
+                <h1 className="flex items-center gap-2 uppercase tracking-tighter text-2xl font-black">
+                  {activeTab === 'overview' && 'Dashboard Central'}
+                  {activeTab === 'companies' && 'Gestão de Empresas'}
+                  {activeTab === 'employees' && 'Base de Colaboradores'}
+                  {activeTab === 'users' && 'Controle de Acessos'}
+                  {activeTab === 'reports' && 'Inteligência de Dados'}
+                  {activeTab === 'settings' && 'Ajustes do Sistema'}
+                </h1>
+                <p className="text-muted-foreground text-xs font-medium mt-1">Gerenciamento inteligente de presença e frequência.</p>
+              </div>
+            </header>
 
-          {renderContent()}
+            {renderContent()}
+          </div>
         </div>
       </main>
 

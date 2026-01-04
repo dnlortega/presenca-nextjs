@@ -24,24 +24,33 @@ export async function GET(req: Request) {
     }
 
     const s: any = session;
+    const userId = s.user?.id;
+
     if (s.user?.role === 'admin') {
       const list = await prisma.funcionarios.findMany({ where, orderBy: { id: 'asc' } });
       return NextResponse.json(list);
     }
 
-    // educator: fetch permitted companies
-    const usuario = await prisma.usuarios.findUnique({ where: { username: s.user.name } });
-    if (!usuario) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const mappings = await prisma.usuario_empresas.findMany({ where: { usuario_id: usuario.id } });
+    // educator: fetch permitted companies
+    const mappings = await prisma.usuario_empresas.findMany({ where: { usuario_id: Number(userId) } });
     const allowed = mappings.map((m) => m.empresa);
+
     if (company && !allowed.includes(company)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // apply allowed companies
-    where.empresa = Array.isArray(where.empresa) ? where.empresa : where.empresa || undefined;
-    const list = await prisma.funcionarios.findMany({ where: { ...where, empresa: { in: allowed } }, orderBy: { id: 'asc' } });
+    // apply allowed companies filter
+    const list = await prisma.funcionarios.findMany({
+      where: {
+        ...where,
+        empresa: company ? company : { in: allowed }
+      },
+      orderBy: { id: 'asc' }
+    });
     return NextResponse.json(list);
   } catch (err) {
     console.error(err);

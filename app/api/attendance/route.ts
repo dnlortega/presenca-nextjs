@@ -70,8 +70,6 @@ export async function POST(req: Request) {
       const existing = await prisma.presenca.findFirst({
         where: {
           funcionario: name,
-          empresa: finalEmpresa,
-          setor: finalSetor,
           data_hora: {
             gte: start,
             lt: end,
@@ -121,12 +119,35 @@ export async function GET(req: Request) {
         },
       },
       select: {
+        id: true,
         funcionario: true,
       },
     });
 
-    const present = records.map((r) => r.funcionario);
-    return NextResponse.json({ present });
+    return NextResponse.json(records);
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions as any);
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+    }
+
+    await prisma.presenca.delete({
+      where: { id: Number(id) }
+    });
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

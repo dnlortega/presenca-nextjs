@@ -11,7 +11,9 @@ import {
   LucideSend,
   LucideShieldCheck,
   LucideChevronRight,
-  LucideCalendar
+  LucideCalendar,
+  LucideTrash2,
+  LucideUserX
 } from 'lucide-react';
 
 import { Card, CardContent } from "./ui/card";
@@ -28,6 +30,7 @@ export default function EducatorClient() {
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [presentToday, setPresentToday] = useState<{ id: number, funcionario: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
@@ -57,10 +60,32 @@ export default function EducatorClient() {
   const loadEmployees = async (sector: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/employees?company=${encodeURIComponent(selectedCompany)}&sector=${encodeURIComponent(sector)}`);
-      const data = await res.json();
-      if (res.ok) setEmployees(data);
+      // Load all employees of this sector
+      const resEmp = await fetch(`/api/employees?company=${encodeURIComponent(selectedCompany)}&sector=${encodeURIComponent(sector)}`);
+      const dataEmp = await resEmp.json();
+
+      // Load who is already present today
+      const resPres = await fetch(`/api/attendance?empresa=${encodeURIComponent(selectedCompany)}&setor=${encodeURIComponent(sector)}`);
+      const dataPres = await resPres.json();
+
+      if (resEmp.ok) setEmployees(dataEmp);
+      if (resPres.ok) setPresentToday(dataPres);
+
       setStep(3);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const deleteAttendance = async (attendanceId: number) => {
+    if (!confirm('Deseja remover esta presença?')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/attendance?id=${attendanceId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setPresentToday(prev => prev.filter(p => p.id !== attendanceId));
+        setFeedback({ type: 'info', msg: 'Presença removida.' });
+        setTimeout(() => setFeedback(null), 2000);
+      }
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -209,30 +234,72 @@ export default function EducatorClient() {
             </div>
 
             <div className="grid grid-cols-1 gap-2.5 pb-24">
-              {employees.map(emp => (
-                <button
-                  key={emp.id}
-                  onClick={() => toggleEmployee(emp.nome)}
-                  className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left ${selectedEmployees.includes(emp.nome)
-                    ? 'bg-primary/5 border-primary shadow-sm'
-                    : 'bg-card border-border hover:border-primary/30'
-                    }`}
-                >
-                  <Avatar className={`h-9 w-9 rounded-lg border transition-colors ${selectedEmployees.includes(emp.nome) ? 'border-primary' : 'border-border'}`}>
-                    <AvatarFallback className={`text-xs font-black ${selectedEmployees.includes(emp.nome) ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      {emp.nome.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className={`text-xs font-black tracking-tight ${selectedEmployees.includes(emp.nome) ? 'text-primary' : ''}`}>
-                      {emp.nome}
+              {employees.length > 0 ? (
+                employees.map(emp => {
+                  const isAlreadyPresent = presentToday.find(p => p.funcionario === emp.nome);
+                  const isSelected = selectedEmployees.includes(emp.nome);
+
+                  return (
+                    <div key={emp.id} className="relative group">
+                      <button
+                        disabled={!!isAlreadyPresent}
+                        onClick={() => toggleEmployee(emp.nome)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all text-left ${isAlreadyPresent
+                          ? 'bg-emerald-500/5 border-emerald-500/50 opacity-80 cursor-default'
+                          : isSelected
+                            ? 'bg-primary/5 border-primary shadow-sm'
+                            : 'bg-card border-border hover:border-primary/30'
+                          }`}
+                      >
+                        <Avatar className={`h-9 w-9 rounded-lg border transition-colors ${isAlreadyPresent ? 'border-emerald-500/50' : isSelected ? 'border-primary' : 'border-border'
+                          }`}>
+                          <AvatarFallback className={`text-xs font-black ${isAlreadyPresent
+                            ? 'bg-emerald-500 text-white'
+                            : isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                            }`}>
+                            {emp.nome.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-xs font-black tracking-tight truncate ${isAlreadyPresent ? 'text-emerald-600' : isSelected ? 'text-primary' : ''
+                            }`}>
+                            {emp.nome}
+                          </div>
+                          {isAlreadyPresent && (
+                            <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Presente</div>
+                          )}
+                        </div>
+                        {isSelected && !isAlreadyPresent && (
+                          <LucideCheckCircle2 className="w-5 h-5 text-primary animate-in zoom-in duration-300" />
+                        )}
+                        {isAlreadyPresent && (
+                          <LucideCheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        )}
+                      </button>
+
+                      {isAlreadyPresent && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => { e.stopPropagation(); deleteAttendance(isAlreadyPresent.id); }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remover presença"
+                        >
+                          <LucideTrash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
+                  );
+                })
+              ) : (
+                <div className="py-12 text-center animate-scale-in">
+                  <div className="w-16 h-16 bg-muted/30 rounded-3xl flex items-center justify-center mx-auto mb-4">
+                    <LucideUserX className="w-8 h-8 text-muted-foreground/50" />
                   </div>
-                  {selectedEmployees.includes(emp.nome) && (
-                    <LucideCheckCircle2 className="w-5 h-5 text-primary animate-in zoom-in duration-300" />
-                  )}
-                </button>
-              ))}
+                  <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Nenhum funcionário cadastrado</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Verifique o setor selecionado no Admin.</p>
+                </div>
+              )}
             </div>
 
             {/* Floating Action Menu */}
