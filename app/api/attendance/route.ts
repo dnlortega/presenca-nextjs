@@ -88,11 +88,18 @@ export async function GET(req: Request) {
 
     const { start, end } = getDayRange();
 
+    const empresaId = Number(empresa);
+    const setorId = Number(setor);
+
+    if (isNaN(empresaId) || isNaN(setorId)) {
+      return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+    }
+
     const records = await prisma.presenca.findMany({
       where: {
         funcionario: {
-          empresa,
-          setor,
+          empresa_id: empresaId,
+          setor_id: setorId,
         },
         data_hora: {
           gte: start,
