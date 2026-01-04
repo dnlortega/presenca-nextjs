@@ -1,214 +1,263 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
-import Card from './ui/Card';
+import {
+  LucideBuilding,
+  LucideLayers,
+  LucideUsers,
+  LucideCheckCircle2,
+  LucideArrowLeft,
+  LucideLogOut,
+  LucideSend,
+  LucideShieldCheck,
+  LucideChevronRight,
+  LucideCalendar
+} from 'lucide-react';
 
-type Func = { id: number; nome: string; empresa: string; setor: string };
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ModeToggle } from "./ModeToggle";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function EducatorClient() {
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState(1);
   const [companies, setCompanies] = useState<string[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [sectors, setSectors] = useState<string[]>([]);
-  const [selectedSector, setSelectedSector] = useState<string | null>(null);
-  const [employees, setEmployees] = useState<Func[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState('');
+  const [selectedSector, setSelectedSector] = useState('');
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
 
   useEffect(() => {
-    fetch('/api/my-companies')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.companies) setCompanies(data.companies);
-      })
-      .catch(console.error);
+    loadMyCompanies();
   }, []);
 
-  // fetch employees for a company to derive sectors
-  const loadEmployeesForCompany = async (company: string) => {
-    const q = new URLSearchParams();
-    q.set('company', company);
-    const res = await fetch('/api/employees?' + q.toString());
-    const data = await res.json();
-    return Array.isArray(data) ? data as Func[] : [];
+  const loadMyCompanies = async () => {
+    try {
+      const res = await fetch('/api/my-companies');
+      const data = await res.json();
+      if (res.ok) setCompanies(data.companies);
+    } catch (e) { console.error(e); }
   };
 
-  const onSelectCompany = async (c: string) => {
-    setSelectedCompany(c);
-    setStep(2);
-    const emps = await loadEmployeesForCompany(c);
-    setEmployees(emps);
-    const uniq = Array.from(new Set(emps.map((e) => e.setor || 'Geral')));
-    setSectors(uniq);
-  };
-
-  const onSelectSector = async (s: string) => {
-    setSelectedSector(s);
-    setStep(3);
-    // employees already loaded for company; filter by sector
-    const filtered = employees.filter((e) => (e.setor || 'Geral') === s);
-    setEmployees(filtered);
-    setSelectedIds(new Set());
-  };
-
-  const toggleSelect = (id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const sendSelected = async () => {
-    if (!selectedCompany || !selectedSector) return;
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) return alert('Nenhum funcionário selecionado');
+  const loadSectors = async (company: string) => {
     setLoading(true);
     try {
-      // 1. Fetch already present employees for today
-      const q = new URLSearchParams();
-      q.set('empresa', selectedCompany);
-      q.set('setor', selectedSector);
-      const checkRes = await fetch('/api/attendance?' + q.toString());
-      const checkData = await checkRes.json();
-
-      // Normalize names for comparison
-      const presentNames = new Set<string>(
-        (Array.isArray(checkData.present) ? checkData.present : []).map((n: string) => n.trim().toLowerCase())
-      );
-
-      const selectedEmployees = employees.filter((e) => ids.includes(e.id));
-
-      // 2. Filter duplicates
-      const toSend: Func[] = [];
-      let dupCount = 0;
-      const remaining = new Set(selectedIds);
-
-      for (const emp of selectedEmployees) {
-        if (presentNames.has(emp.nome.trim().toLowerCase())) {
-          dupCount++;
-          remaining.delete(emp.id); // Remove from selection as it's already done
-        } else {
-          toSend.push(emp);
-        }
-      }
-
-      // 3. Send only new ones
-      const promises = toSend.map((emp) =>
-        fetch('/api/attendance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ funcionario: emp.nome, empresa: selectedCompany, setor: selectedSector })
-        })
-      );
-      const results = await Promise.all(promises);
-
-      let okCount = 0;
-      let errCount = 0;
-
-      for (let i = 0; i < results.length; i++) {
-        const r = results[i];
-        const emp = toSend[i];
-        if (r.ok) {
-          okCount++;
-          remaining.delete(emp.id);
-        } else if (r.status === 409) {
-          dupCount++;
-          remaining.delete(emp.id);
-        } else {
-          errCount++;
-          // keep in selection so user can retry
-        }
-      }
-
-      setSelectedIds(remaining);
-
-      const parts = [] as string[];
-      if (okCount) parts.push(`${okCount} registrados`);
-      if (dupCount) parts.push(`${dupCount} duplicados pulados`);
-      if (errCount) parts.push(`${errCount} erros`);
-      alert(`Envio concluído: ${parts.join(', ') || 'nenhum registro'}.`);
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao enviar presenças');
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`/api/sectors?company=${encodeURIComponent(company)}`);
+      const data = await res.json();
+      if (res.ok) setSectors(data);
+      setStep(2);
+    } catch (e) { console.error(e); }
+    setLoading(false);
   };
 
+  const loadEmployees = async (sector: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/employees?company=${encodeURIComponent(selectedCompany)}&sector=${encodeURIComponent(sector)}`);
+      const data = await res.json();
+      if (res.ok) setEmployees(data);
+      setStep(3);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const toggleEmployee = (name: string) => {
+    setSelectedEmployees(prev =>
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
+  };
+
+  const submitAttendance = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: selectedCompany,
+          sector: selectedSector,
+          employees: selectedEmployees,
+        }),
+      });
+      const result = await res.json();
+
+      if (res.ok) {
+        setFeedback({
+          type: 'success',
+          msg: `${result.count} presenças registradas com sucesso!`
+        });
+        setTimeout(() => {
+          setStep(1);
+          setSelectedEmployees([]);
+          setFeedback(null);
+        }, 3000);
+      } else {
+        setFeedback({ type: 'error', msg: result.error || 'Erro ao registrar' });
+      }
+    } catch (e) {
+      setFeedback({ type: 'error', msg: 'Falha na conexão' });
+    }
+    setLoading(false);
+  };
+
+  const ProgressHeader = () => (
+    <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground">
+          <LucideShieldCheck className="w-5 h-5" />
+        </div>
+        <span className="font-black text-xs uppercase tracking-tighter">Educador<span className="text-primary">.Pro</span></span>
+      </div>
+      <div className="flex items-center gap-3">
+        <ModeToggle />
+        <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/login' })} className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-destructive">
+          Sair
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
-    <main className="p-4">
-      <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-sky-900">Área do Educador</h1>
-        <button onClick={() => signOut({ callbackUrl: '/login' })} className="text-sm text-gray-600 hover:underline">Sair</button>
+    <div className="min-h-screen bg-background p-6 max-w-lg mx-auto page-transition">
+      <ProgressHeader />
+
+      <header className="mb-6">
+        <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-widest mb-1.5">
+          <LucideCalendar className="w-3.5 h-3.5" />
+          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </div>
+        <h1 className="text-2xl font-black uppercase tracking-tighter leading-none">
+          Registro de <span className="text-primary italic">Chamada</span>
+        </h1>
       </header>
 
-      <Card>
-        <div className="flex flex-col gap-6">
-          {step === 1 && (
-            <section>
-              <div className="text-sm text-sky-900 font-semibold mb-3">1. SELECIONE A EMPRESA</div>
-              <div className="space-y-3">
-                {companies.map((c) => (
-                  <button key={c} onClick={() => onSelectCompany(c)} className="w-full text-left bg-white rounded-xl p-6 shadow-sm hover:shadow-md">
-                    <div className="text-base font-medium text-slate-800">{c}</div>
-                  </button>
-                ))}
-                {companies.length === 0 && <div className="text-sm text-gray-500">Nenhuma empresa encontrada.</div>}
-              </div>
-            </section>
-          )}
+      {/* Steps indicator */}
+      <div className="flex gap-1.5 mb-8">
+        {[1, 2, 3].map(i => (
+          <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-primary' : 'bg-muted'}`} />
+        ))}
+      </div>
 
-          {step === 2 && (
-            <section>
-              <div className="mb-4 flex items-center gap-4">
-                <button className="text-sm text-gray-600" onClick={() => { setStep(1); setSelectedCompany(null); }}>← VOLTAR</button>
-                <div className="text-sm text-sky-900 font-semibold">2. SETORES | {selectedCompany}</div>
-              </div>
+      <div className="space-y-4">
+        {feedback && (
+          <div className={`p-4 rounded-xl text-xs font-bold animate-in fade-in slide-in-from-top-2 flex items-center gap-2 ${feedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+              'bg-destructive/10 text-destructive border border-destructive/20'
+            }`}>
+            <LucideCheckCircle2 className="w-4 h-4" />
+            {feedback.msg}
+          </div>
+        )}
 
-              <div className="space-y-3">
-                {sectors.map((s) => (
-                  <button key={s} onClick={() => onSelectSector(s)} className="w-full text-left bg-white rounded-xl p-6 shadow-sm hover:shadow-md">
-                    <div className="text-base font-medium text-slate-800">{s}</div>
-                  </button>
-                ))}
-                {sectors.length === 0 && <div className="text-sm text-gray-500">Nenhum setor encontrado para esta empresa.</div>}
-              </div>
-            </section>
-          )}
+        {step === 1 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1 mb-2">
+              <LucideBuilding className="w-4 h-4 text-muted-foreground" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Selecione a Empresa</span>
+            </div>
+            {companies.map(c => (
+              <Button
+                key={c}
+                variant="outline"
+                onClick={() => { setSelectedCompany(c); loadSectors(c); }}
+                className="w-full justify-between h-14 rounded-2xl border-muted-foreground/10 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              >
+                <span className="font-bold text-sm tracking-tight">{c}</span>
+                <LucideChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-1" />
+              </Button>
+            ))}
+          </div>
+        )}
 
-          {step === 3 && (
-            <section>
-              <div className="mb-4 flex items-center gap-4">
-                <button className="text-sm text-gray-600" onClick={() => { setStep(2); setSelectedSector(null); }}>← SETORES</button>
-                <div className="text-sm text-sky-900 font-semibold">3. FUNCIONÁRIOS | {selectedSector}</div>
-              </div>
+        {step === 2 && (
+          <div className="space-y-3">
+            <button onClick={() => setStep(1)} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary mb-4 transition-colors">
+              <LucideArrowLeft className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Mudar Empresa</span>
+            </button>
+            <div className="flex items-center gap-2 px-1 mb-2">
+              <LucideLayers className="w-4 h-4 text-muted-foreground" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Qual o Setor?</span>
+            </div>
+            {sectors.map(s => (
+              <Button
+                key={s}
+                variant="outline"
+                onClick={() => { setSelectedSector(s); loadEmployees(s); }}
+                className="w-full justify-between h-14 rounded-2xl border-muted-foreground/10 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              >
+                <span className="font-bold text-sm tracking-tight">{s}</span>
+                <LucideChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-1" />
+              </Button>
+            ))}
+          </div>
+        )}
 
-              <div className="text-xs text-gray-500 mb-3">CLIQUE PARA SELECIONAR/DESSELECIONAR.</div>
+        {step === 3 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={() => setStep(2)} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+                <LucideArrowLeft className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{selectedSector}</span>
+              </button>
+              <Badge variant="outline" className="text-[10px] font-black border-primary/20 text-primary">
+                {selectedEmployees.length} Selecionados
+              </Badge>
+            </div>
 
-              <div className="space-y-3">
-                {employees.map((e) => {
-                  const isSelected = selectedIds.has(e.id);
-                  return (
-                    <button key={e.id} onClick={() => toggleSelect(e.id)} className={`w-full text-left rounded-xl p-6 shadow-sm flex items-center justify-between ${isSelected ? 'ring-2 ring-indigo-400 bg-indigo-50' : 'bg-white'} `}>
-                      <div className="text-base font-medium text-slate-800">{e.nome}</div>
-                      <div className="text-sm text-gray-500">{isSelected ? 'Selecionado' : ''}</div>
-                    </button>
-                  );
-                })}
-                {employees.length === 0 && <div className="text-sm text-gray-500">Nenhum funcionário encontrado.</div>}
-              </div>
-
-              <div className="mt-6 text-center">
-                <button onClick={sendSelected} disabled={loading || selectedIds.size === 0} className="px-6 py-3 rounded-full bg-black text-white font-bold disabled:opacity-50">
-                  {loading ? 'Enviando...' : `ENVIAR SELECIONADOS (${selectedIds.size})`}
+            <div className="grid grid-cols-1 gap-2.5 pb-24">
+              {employees.map(emp => (
+                <button
+                  key={emp.id}
+                  onClick={() => toggleEmployee(emp.nome)}
+                  className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left ${selectedEmployees.includes(emp.nome)
+                      ? 'bg-primary/5 border-primary shadow-sm'
+                      : 'bg-card border-border hover:border-primary/30'
+                    }`}
+                >
+                  <Avatar className={`h-9 w-9 rounded-lg border transition-colors ${selectedEmployees.includes(emp.nome) ? 'border-primary' : 'border-border'}`}>
+                    <AvatarFallback className={`text-xs font-black ${selectedEmployees.includes(emp.nome) ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                      {emp.nome.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className={`text-xs font-black tracking-tight ${selectedEmployees.includes(emp.nome) ? 'text-primary' : ''}`}>
+                      {emp.nome}
+                    </div>
+                  </div>
+                  {selectedEmployees.includes(emp.nome) && (
+                    <LucideCheckCircle2 className="w-5 h-5 text-primary animate-in zoom-in duration-300" />
+                  )}
                 </button>
-              </div>
-            </section>
-          )}
-        </div>
-      </Card>
-    </main>
+              ))}
+            </div>
+
+            {/* Floating Action Menu */}
+            <div className="fixed bottom-6 left-6 right-6 max-w-lg mx-auto">
+              <Card className="glass border-primary/20 bg-background/80 px-4 py-3 rounded-2xl flex items-center justify-between shadow-2xl">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black uppercase text-muted-foreground">Total para Enviar</span>
+                  <span className="text-lg font-black">{selectedEmployees.length}</span>
+                </div>
+                <Button
+                  disabled={selectedEmployees.length === 0 || loading}
+                  onClick={submitAttendance}
+                  className="rounded-xl px-6 h-12 font-black shadow-lg shadow-primary/20"
+                >
+                  {loading ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-white/20 border-t-white rounded-full" />
+                  ) : (
+                    <>Confirmar <LucideSend className="w-4 h-4 ml-2" /></>
+                  )}
+                </Button>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

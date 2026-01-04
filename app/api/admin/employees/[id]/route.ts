@@ -1,27 +1,29 @@
 import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
-import prisma from '../../../../../lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../auth/[...nextauth]/route';
+export const revalidate = 0;
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions as any);
-        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!session || (session.user as any)?.role !== 'admin') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        const { id: idStr } = await params;
-        const id = parseInt(idStr);
-        const body = await req.json();
-        const { nome, empresa, setor } = body;
+        const { id } = await params;
+        const { nome, empresa, setor } = await req.json();
 
-        const updated = await prisma.funcionarios.update({
-            where: { id },
-            data: { nome, empresa, setor },
-        });
+        await prisma.$executeRawUnsafe(
+            'UPDATE "funcionarios" SET nome = $1, empresa = $2, setor = $3 WHERE id = $4',
+            nome, empresa, setor, Number(id)
+        );
 
-        return NextResponse.json(updated);
+        return NextResponse.json({ success: true });
     } catch (err) {
+        console.error(err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }
@@ -29,17 +31,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getServerSession(authOptions as any);
-        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!session || (session.user as any)?.role !== 'admin') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        const { id: idStr } = await params;
-        const id = parseInt(idStr);
-
-        await prisma.funcionarios.delete({
-            where: { id },
-        });
+        const { id } = await params;
+        await prisma.$executeRawUnsafe('DELETE FROM "funcionarios" WHERE id = $1', Number(id));
 
         return NextResponse.json({ success: true });
     } catch (err) {
+        console.error(err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }

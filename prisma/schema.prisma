@@ -22,14 +22,7 @@ model presenca {
   data_hora   DateTime @default(now()) @db.Date
 }
 
-model users {
-  id           Int       @id @default(autoincrement())
-  username     String    @unique @db.VarChar(255)
-  passwordHash String    @db.VarChar(255)
-  role         String    @db.VarChar(50)
-  createdAt    DateTime? @default(now()) @db.Timestamp(6)
-  updatedAt    DateTime? @default(now()) @db.Timestamp(6)
-}
+// model users removed
 
 model usuario_empresas {
   id         Int      @id @default(autoincrement())
@@ -41,11 +34,12 @@ model usuario_empresas {
 model usuarios {
   id               Int                @id @default(autoincrement())
   username         String             @unique @db.VarChar(50)
-  password_hash    String             @db.VarChar(255)
-  role             Role
+  email            String?            @unique @db.VarChar(255)
+  password_hash    String?            @db.VarChar(255)
+  role             Role?
   can_register     Boolean            @default(false)
   created_at       DateTime           @default(now())
-  updated_at       DateTime
+  updated_at       DateTime           @updatedAt
   usuario_empresas usuario_empresas[]
 }
 
@@ -53,4 +47,5 @@ enum Role {
   admin
   educador
   suporte
+  pendente
 }

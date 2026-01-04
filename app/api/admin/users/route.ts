@@ -1,0 +1,25 @@
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export async function GET() {
+    try {
+        const session = await getServerSession(authOptions as any);
+        if (!session || (session.user as any)?.role !== 'admin') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const users = await prisma.$queryRawUnsafe<any[]>(
+            'SELECT id, username, email, role, created_at FROM "usuarios" ORDER BY created_at DESC'
+        );
+
+        return NextResponse.json(users);
+    } catch (err) {
+        console.error('Erro ao buscar usuários:', err);
+        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    }
+}

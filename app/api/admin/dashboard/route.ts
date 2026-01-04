@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import prisma from '../../../../lib/prisma';
+import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Helper for Sao Paulo date (same as in attendance route)
 function getSaoPauloDate() {
     const now = new Date();
     const offset = -3 * 60 * 60 * 1000;
@@ -34,34 +33,20 @@ export async function GET() {
         const { start: startToday, end: endToday } = getDayRange(todayRef);
 
         // 1. Total Today
-        const totalToday = await prisma.presenca.count({
-            where: {
-                data_hora: {
-                    gte: startToday,
-                    lt: endToday,
-                },
-            },
-        });
+        const totalCounts: any[] = await prisma.$queryRawUnsafe(
+            'SELECT COUNT(*)::int as count FROM "presenca" WHERE "data_hora" >= $1 AND "data_hora" < $2',
+            startToday, endToday
+        );
+        const totalToday = totalCounts[0]?.count || 0;
 
         // 2. Active Sectors Today
-        // Prisma doesn't support distinct count directly on a column easily with count(), 
-        // so we group by or fetch distinct.
-        const sectors = await prisma.presenca.findMany({
-            where: {
-                data_hora: {
-                    gte: startToday,
-                    lt: endToday,
-                },
-            },
-            select: {
-                setor: true,
-            },
-            distinct: ['setor'],
-        });
+        const sectors: any[] = await prisma.$queryRawUnsafe(
+            'SELECT DISTINCT "setor" FROM "presenca" WHERE "data_hora" >= $1 AND "data_hora" < $2',
+            startToday, endToday
+        );
         const sectorsActive = sectors.length;
 
         // 3. Weekly Trend (Last 7 days)
-        // We'll generate the last 7 days and query counts for each.
         const trend = [];
         const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -70,26 +55,28 @@ export async function GET() {
             d.setDate(d.getDate() - i);
             const { start, end } = getDayRange(d);
 
-            const count = await prisma.presenca.count({
-                where: {
-                    data_hora: {
-                        gte: start,
-                        lt: end,
-                    },
-                },
-            });
+            const counts: any[] = await prisma.$queryRawUnsafe(
+                'SELECT COUNT(*)::int as count FROM "presenca" WHERE "data_hora" >= $1 AND "data_hora" < $2',
+                start, end
+            );
 
             trend.push({
                 date: days[d.getUTCDay()],
-                present: count,
-                absent: 0, // We don't track absent yet in this simple model
+                present: counts[0]?.count || 0,
+                absent: 0,
             });
         }
+
+        // 4. Recent Activity (Last 5 presence records)
+        const recentActivities = await prisma.$queryRawUnsafe<any[]>(
+            'SELECT id, funcionario, setor, empresa, data_hora FROM "presenca" ORDER BY id DESC LIMIT 5'
+        );
 
         return NextResponse.json({
             totalToday,
             sectorsActive,
             trend,
+            recentActivities
         });
     } catch (err) {
         console.error(err);

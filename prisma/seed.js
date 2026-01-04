@@ -6,21 +6,21 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Running seed...');
 
-  // Admin user for `usuarios` model (introspected schema)
+  // Admin user
   const adminPassword = 'Admin#1234';
   const adminHash = bcrypt.hashSync(adminPassword, 10);
 
-  // Upsert admin to avoid duplicates
   const admin = await prisma.usuarios.upsert({
     where: { username: 'admin' },
     update: {
+      email: 'admin@presenca.pro',
       password_hash: adminHash,
       role: 'admin',
-      can_register: false,
       updated_at: new Date()
     },
     create: {
       username: 'admin',
+      email: 'admin@presenca.pro',
       password_hash: adminHash,
       role: 'admin',
       can_register: false,
@@ -29,9 +29,33 @@ async function main() {
     }
   });
 
-  console.log('Admin user ensured:', admin.username, '(password: ' + adminPassword + ')');
+  console.log('Admin user ensured:', admin.username, 'Email:', admin.email);
 
-  // Create sample funcionarios
+  // Educador user
+  const eduPassword = 'Educador#123';
+  const eduHash = bcrypt.hashSync(eduPassword, 10);
+  const educador = await prisma.usuarios.upsert({
+    where: { username: 'educador' },
+    update: {
+      email: 'educador@presenca.pro',
+      password_hash: eduHash,
+      role: 'educador',
+      updated_at: new Date()
+    },
+    create: {
+      username: 'educador',
+      email: 'educador@presenca.pro',
+      password_hash: eduHash,
+      role: 'educador',
+      can_register: false,
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+  });
+
+  console.log('Educador user ensured:', educador.username, 'Email:', educador.email);
+
+  // Sample Employees
   const sampleEmployees = [
     { nome: 'Mariana Silva', empresa: 'Escola Sol', setor: 'Sala 1' },
     { nome: 'João Pereira', empresa: 'Escola Sol', setor: 'Sala 1' },
@@ -39,43 +63,22 @@ async function main() {
   ];
 
   for (const emp of sampleEmployees) {
-    const exists = await prisma.funcionarios.findFirst({ where: { nome: emp.nome, empresa: emp.empresa, setor: emp.setor } });
-    if (!exists) {
-      const f = await prisma.funcionarios.create({ data: emp });
-      console.log('Funcionario created:', f.nome);
-    } else {
-      console.log('Funcionario already exists:', exists.nome);
-    }
+    await prisma.funcionarios.upsert({
+      where: { id: sampleEmployees.indexOf(emp) + 1 }, // Using ID as a shortcut for seed
+      update: emp,
+      create: emp
+    }).catch(() => {
+      // Fallback if ID strategy fails
+      return prisma.funcionarios.create({ data: emp });
+    });
   }
 
-  // Create an educador user and map to 'Escola Sol'
-  const eduPassword = 'Educador#123';
-  const eduHash = bcrypt.hashSync(eduPassword, 10);
-  const educador = await prisma.usuarios.upsert({
-    where: { username: 'educador' },
-    update: {
-      password_hash: eduHash,
-      role: 'educador',
-      updated_at: new Date()
-    },
-    create: {
-      username: 'educador',
-      password_hash: eduHash,
-      role: 'educador',
-      can_register: false,
-      created_at: new Date(),
-      updated_at: new Date()
-    }
-  });
-
-  // Map educador to Empresa 'Escola Sol' in usuario_empresas
-  const map = await prisma.usuario_empresas.upsert({
+  // Map educador to Empresa 'Escola Sol'
+  await prisma.usuario_empresas.upsert({
     where: { id: 1 },
     update: { empresa: 'Escola Sol', usuario_id: educador.id },
     create: { usuario_id: educador.id, empresa: 'Escola Sol' }
   });
-
-  console.log('Educador user ensured:', educador.username, '(password: ' + eduPassword + ')');
 
   console.log('Seed finished.');
 }
