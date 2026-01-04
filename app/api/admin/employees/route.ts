@@ -28,8 +28,8 @@ export async function GET() {
             valor: e.valor ? Number(e.valor) : null,
             empresa_id: e.empresa_id,
             setor_id: e.setor_id,
-            empresa: e.empresa.nome,
-            setor: e.setor.nome
+            empresa: e.empresa?.nome || null,
+            setor: e.setor?.nome || null
         }));
 
         return NextResponse.json(formatted);

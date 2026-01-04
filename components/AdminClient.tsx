@@ -59,8 +59,8 @@ type Employee = {
   valor?: string | number;
   empresa_id: number;
   setor_id: number;
-  empresa?: { nome: string };
-  setor?: { nome: string };
+  empresa?: string | { nome: string };
+  setor?: string | { nome: string };
 };
 
 type Sector = {
@@ -113,7 +113,7 @@ export default function AdminClient() {
   const [editingSector, setEditingSector] = useState<Sector | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userCompForm, setUserCompForm] = useState<string[]>([]);
-  const [empForm, setEmpForm] = useState({ nome: '', empresa_id: '', setor_id: '', valor: '' });
+  const [empForm, setEmpForm] = useState({ nome: '', empresa_id: '', setor_id: '' });
   const [compForm, setCompForm] = useState({ nome: '' });
   const [sectorForm, setSectorForm] = useState({ nome: '', empresa_id: '' });
   const [searchTerm, setSearchTerm] = useState('');
@@ -237,15 +237,14 @@ export default function AdminClient() {
         body: JSON.stringify({
           nome: empForm.nome,
           empresa_id: Number(empForm.empresa_id),
-          setor_id: Number(empForm.setor_id),
-          valor: empForm.valor ? Number(empForm.valor) : null
+          setor_id: Number(empForm.setor_id)
         }),
       });
 
       if (res.ok) {
         setIsEmpModalOpen(false);
         setEditingEmp(null);
-        setEmpForm({ nome: '', empresa_id: '', setor_id: '', valor: '' });
+        setEmpForm({ nome: '', empresa_id: '', setor_id: '' });
         loadEmployees();
       } else {
         alert('Erro ao salvar');
@@ -312,8 +311,7 @@ export default function AdminClient() {
       setEmpForm({
         nome: emp.nome,
         empresa_id: String(emp.empresa_id),
-        setor_id: String(emp.setor_id),
-        valor: emp.valor ? String(emp.valor) : ''
+        setor_id: String(emp.setor_id)
       });
     } else {
       setEditingEmp(null);
@@ -387,11 +385,15 @@ export default function AdminClient() {
     } catch (err) { console.error(err); }
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    (emp.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (emp.empresa?.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (emp.setor?.nome || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(emp => {
+    const empresaNome = typeof emp.empresa === 'string' ? emp.empresa : emp.empresa?.nome || '';
+    const setorNome = typeof emp.setor === 'string' ? emp.setor : emp.setor?.nome || '';
+    return (
+      (emp.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      empresaNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      setorNome.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const filteredCompanies = companies.filter(comp =>
     (comp.nome || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -788,10 +790,12 @@ export default function AdminClient() {
                     {filteredEmployees.map((emp) => (
                       <TableRow key={emp.id} className="border-muted/30 group">
                         <TableCell className="py-3 font-bold">{emp.nome || '-'}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{emp.empresa?.nome || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || emp.empresa || '-')}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
-                            {emp.setor?.nome || '-'}
+                            {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || emp.setor || '-')}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -1175,17 +1179,6 @@ export default function AdminClient() {
                     </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Valor da Diária (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                      value={empForm.valor}
-                      onChange={e => setEmpForm({ ...empForm, valor: e.target.value })}
-                      placeholder="0.00"
-                    />
-                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-6">
