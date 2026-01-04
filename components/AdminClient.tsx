@@ -16,7 +16,8 @@ import {
   LucideShieldCheck,
   LucideUserCheck,
   LucideClock,
-  LucideMail
+  LucideMail,
+  LucideBuilding
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -28,7 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./ModeToggle";
 import AttendanceChart from "./AttendanceChart";
 
-type Tab = 'overview' | 'employees' | 'users' | 'reports' | 'settings';
+type Tab = 'overview' | 'companies' | 'employees' | 'users' | 'reports' | 'settings';
 
 type RecentActivity = {
   id: number;
@@ -60,21 +61,31 @@ type User = {
   created_at: string;
 };
 
+type Company = {
+  id: number;
+  nome: string;
+};
+
 export default function AdminClient() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
+  const [isCompModalOpen, setIsCompModalOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState<Employee | null>(null);
+  const [editingComp, setEditingComp] = useState<Company | null>(null);
   const [empForm, setEmpForm] = useState({ nome: '', empresa: '', setor: '' });
+  const [compForm, setCompForm] = useState({ nome: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'overview') loadDashboard();
-    if (activeTab === 'employees') loadEmployees();
+    if (activeTab === 'employees') { loadEmployees(); loadCompanies(); }
     if (activeTab === 'users') loadUsers();
+    if (activeTab === 'companies') loadCompanies();
   }, [activeTab]);
 
   const loadDashboard = async () => {
@@ -101,6 +112,14 @@ export default function AdminClient() {
       if (Array.isArray(data)) setUsers(data);
     } catch (e) { console.error(e); }
     setLoadingUsers(false);
+  };
+
+  const loadCompanies = async () => {
+    try {
+      const res = await fetch('/api/admin/companies');
+      const data = await res.json();
+      if (Array.isArray(data)) setCompanies(data);
+    } catch (e) { console.error(e); }
   };
 
   const updateUserRole = async (userId: number, newRole: string) => {
@@ -147,6 +166,50 @@ export default function AdminClient() {
     } catch (err) { console.error(err); }
   };
 
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const url = editingComp ? `/api/admin/companies/${editingComp.id}` : '/api/admin/companies';
+      const method = editingComp ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(compForm),
+      });
+
+      if (res.ok) {
+        setIsCompModalOpen(false);
+        setEditingComp(null);
+        setCompForm({ nome: '' });
+        loadCompanies();
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Erro ao salvar');
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteCompany = async (id: number) => {
+    if (!confirm('Tem certeza que deseja excluir?')) return;
+    try {
+      const res = await fetch(`/api/admin/companies/${id}`, { method: 'DELETE' });
+      if (res.ok) loadCompanies();
+      else alert('Erro ao excluir');
+    } catch (err) { console.error(err); }
+  };
+
+  const openCompModal = (comp?: Company) => {
+    if (comp) {
+      setEditingComp(comp);
+      setCompForm({ nome: comp.nome });
+    } else {
+      setEditingComp(null);
+      setCompForm({ nome: '' });
+    }
+    setIsCompModalOpen(true);
+  };
+
   const openEmpModal = (emp?: Employee) => {
     if (emp) {
       setEditingEmp(emp);
@@ -162,6 +225,10 @@ export default function AdminClient() {
     emp.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.setor.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredCompanies = companies.filter(comp =>
+    comp.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const renderContent = () => {
@@ -260,6 +327,59 @@ export default function AdminClient() {
                 </CardContent>
               </Card>
             </section>
+          </div>
+        );
+      case 'companies':
+        return (
+          <div className="page-transition space-y-4">
+            <Card className="border-none shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Empresas</CardTitle>
+                  <CardDescription>{companies.length} empresas cadastradas</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Buscar..."
+                      className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-primary w-48 transition-all"
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Button size="sm" onClick={() => openCompModal()} className="font-bold rounded-lg px-4">
+                    <LucidePlus className="w-4 h-4 mr-1" /> Nova Empresa
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-muted/50">
+                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome da Empresa</TableHead>
+                      <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCompanies.map((comp) => (
+                      <TableRow key={comp.id} className="border-muted/30 group">
+                        <TableCell className="py-3 font-bold">{comp.nome}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openCompModal(comp)}>
+                            <LucideEdit className="w-3 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteCompany(comp.id)}>
+                            <LucideTrash className="w-3 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </div>
         );
       case 'employees':
@@ -420,6 +540,7 @@ export default function AdminClient() {
           <nav className="flex-1 space-y-1">
             {[
               { id: 'overview', label: 'Dashboard', icon: LucideLayoutDashboard },
+              { id: 'companies', label: 'Empresas', icon: LucideBuilding },
               { id: 'employees', label: 'Funcionários', icon: LucideUsers },
               { id: 'users', label: 'Acessos', icon: LucideUserCheck },
               { id: 'reports', label: 'Relatórios', icon: LucideFileText },
@@ -462,6 +583,7 @@ export default function AdminClient() {
             <div>
               <h1 className="flex items-center gap-2 uppercase tracking-tighter">
                 {activeTab === 'overview' && 'Dashboard Central'}
+                {activeTab === 'companies' && 'Gestão de Empresas'}
                 {activeTab === 'employees' && 'Base de Colaboradores'}
                 {activeTab === 'users' && 'Controle de Acessos'}
                 {activeTab === 'reports' && 'Inteligência de Dados'}
@@ -495,12 +617,17 @@ export default function AdminClient() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Empresa</label>
-                  <input
+                  <select
                     required
-                    className="w-full bg-muted/30 border-none rounded-lg px-4 py-2 text-xs focus:ring-1 focus:ring-primary"
+                    className="w-full bg-muted/30 border-none rounded-lg px-4 py-2 text-xs focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
                     value={empForm.empresa}
                     onChange={e => setEmpForm({ ...empForm, empresa: e.target.value })}
-                  />
+                  >
+                    <option value="" disabled>Selecione uma empresa</option>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.nome}>{c.nome}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Setor</label>
@@ -513,6 +640,35 @@ export default function AdminClient() {
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
                   <Button variant="ghost" type="button" onClick={() => setIsEmpModalOpen(false)}>Cancelar</Button>
+                  <Button type="submit">Confirmar</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Company Modal */}
+      {isCompModalOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm shadow-2xl border-border">
+            <CardHeader>
+              <CardTitle className="text-lg">{editingComp ? 'Editar Empresa' : 'Nova Empresa'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveCompany} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nome da Empresa</label>
+                  <input
+                    required
+                    className="w-full bg-muted/30 border-none rounded-lg px-4 py-2 text-xs focus:ring-1 focus:ring-primary"
+                    value={compForm.nome}
+                    onChange={e => setCompForm({ nome: e.target.value })}
+                    placeholder="Ex: Minha Empresa LTDA"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="ghost" type="button" onClick={() => setIsCompModalOpen(false)}>Cancelar</Button>
                   <Button type="submit">Confirmar</Button>
                 </div>
               </form>

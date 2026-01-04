@@ -43,6 +43,11 @@ model usuarios {
   usuario_empresas usuario_empresas[]
 }
 
+model empresas {
+  id   Int    @id @default(autoincrement())
+  nome String @unique @db.VarChar(255)
+}
+
 enum Role {
   admin
   educador
