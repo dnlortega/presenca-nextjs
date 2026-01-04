@@ -788,10 +788,10 @@ export default function AdminClient() {
                     {filteredEmployees.map((emp) => (
                       <TableRow key={emp.id} className="border-muted/30 group">
                         <TableCell className="py-3 font-bold">{emp.nome || '-'}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{emp.empresa || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{emp.empresa?.nome || '-'}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
-                            {emp.setor || '-'}
+                            {emp.setor?.nome || '-'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -1122,7 +1122,7 @@ export default function AdminClient() {
           <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <LucideUserPlus className="w-5 h-5 text-primary" />
+                <LucideUser className="w-5 h-5 text-primary" />
                 {editingEmp ? 'Editar Funcionário' : 'Novo Registro'}
               </CardTitle>
             </CardHeader>

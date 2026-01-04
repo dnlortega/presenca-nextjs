@@ -234,7 +234,7 @@ export default function EducatorClient() {
             <div className="grid grid-cols-1 gap-2.5 pb-24">
               {employees.length > 0 ? (
                 employees.map(emp => {
-                  const isAlreadyPresent = presentToday.find(p => p.funcionario_id === emp.id);
+                  const isAlreadyPresent = presentToday.find(p => p.id === emp.id);
                   const isSelected = selectedEmployees.includes(emp.id);
 
                   return (
