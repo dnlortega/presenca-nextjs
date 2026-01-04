@@ -19,12 +19,12 @@ import {
   LucideMail
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { ModeToggle } from "./ModeToggle";
 import AttendanceChart from './AttendanceChart';
 
@@ -429,8 +429,8 @@ export default function AdminClient() {
                 key={item.id}
                 onClick={() => setActiveTab(item.id as Tab)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${activeTab === item.id
-                    ? 'bg-primary text-primary-foreground shadow-md shadow-primary/10'
-                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-md shadow-primary/10'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                   }`}
               >
                 <item.icon className="w-4 h-4" />

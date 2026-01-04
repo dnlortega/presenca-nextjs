@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 
 export const dynamic = 'force-dynamic';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '../lib/auth';
 import { redirect } from 'next/navigation';
 import AdminClient from '../../components/AdminClient';
 

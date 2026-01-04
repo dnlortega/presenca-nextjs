@@ -6,13 +6,12 @@ import {
   LucideShieldCheck,
   LucideUser,
   LucideLock,
-  LucideArrowRight,
-  LucideMail
+  LucideArrowRight
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/ModeToggle";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { ModeToggle } from "../components/ModeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,7 +58,7 @@ export default function LoginPage() {
           <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 mx-auto mb-4">
             <LucideShieldCheck className="w-7 h-7" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase uppercase">Presença<span className="text-primary">.Pro</span></h1>
+          <h1 className="text-3xl font-black tracking-tighter uppercase">Presença<span className="text-primary">.Pro</span></h1>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Controle Inteligente de Frequência</p>
         </div>
 

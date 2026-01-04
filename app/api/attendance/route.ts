@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import prisma from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '../../../lib/auth';
 
 // Helper to get the current date in Sao Paulo timezone (UTC-3)
 // Returns a Date object representing 12:00 PM UTC on the current Sao Paulo day.

@@ -14,11 +14,11 @@ import {
   LucideCalendar
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
 import { ModeToggle } from "./ModeToggle";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "../components/ui/avatar";
 
 export default function EducatorClient() {
   const [step, setStep] = useState(1);
@@ -145,7 +145,7 @@ export default function EducatorClient() {
       <div className="space-y-4">
         {feedback && (
           <div className={`p-4 rounded-xl text-xs font-bold animate-in fade-in slide-in-from-top-2 flex items-center gap-2 ${feedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-              'bg-destructive/10 text-destructive border border-destructive/20'
+            'bg-destructive/10 text-destructive border border-destructive/20'
             }`}>
             <LucideCheckCircle2 className="w-4 h-4" />
             {feedback.msg}
@@ -214,8 +214,8 @@ export default function EducatorClient() {
                   key={emp.id}
                   onClick={() => toggleEmployee(emp.nome)}
                   className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-left ${selectedEmployees.includes(emp.nome)
-                      ? 'bg-primary/5 border-primary shadow-sm'
-                      : 'bg-card border-border hover:border-primary/30'
+                    ? 'bg-primary/5 border-primary shadow-sm'
+                    : 'bg-card border-border hover:border-primary/30'
                     }`}
                 >
                   <Avatar className={`h-9 w-9 rounded-lg border transition-colors ${selectedEmployees.includes(emp.nome) ? 'border-primary' : 'border-border'}`}>
