@@ -315,7 +315,7 @@ export default function AdminClient() {
       });
     } else {
       setEditingEmp(null);
-      setEmpForm({ nome: '', empresa_id: '', setor_id: '', valor: '' });
+      setEmpForm({ nome: '', empresa_id: '', setor_id: '' });
     }
     setIsEmpModalOpen(true);
   };
