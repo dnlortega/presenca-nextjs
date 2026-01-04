@@ -389,8 +389,8 @@ export default function AdminClient() {
 
   const filteredEmployees = employees.filter(emp =>
     (emp.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (emp.empresa || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (emp.setor || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (emp.empresa?.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.setor?.nome || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredCompanies = companies.filter(comp =>
