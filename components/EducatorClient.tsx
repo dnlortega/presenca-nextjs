@@ -14,11 +14,11 @@ import {
   LucideCalendar
 } from 'lucide-react';
 
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { ModeToggle } from "./ModeToggle";
-import { Avatar, AvatarFallback } from "../components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ModeToggle } from "@/components/ModeToggle";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function EducatorClient() {
   const [step, setStep] = useState(1);

@@ -19,14 +19,14 @@ import {
   LucideMail
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { ModeToggle } from "./ModeToggle";
-import AttendanceChart from './AttendanceChart';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ModeToggle } from "@/components/ModeToggle";
+import AttendanceChart from '@/components/AttendanceChart';
 
 type Tab = 'overview' | 'employees' | 'users' | 'reports' | 'settings';
 

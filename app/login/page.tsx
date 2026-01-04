@@ -9,9 +9,9 @@ import {
   LucideArrowRight
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { ModeToggle } from "../components/ModeToggle";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/ModeToggle";
 
 export default function LoginPage() {
   const router = useRouter();

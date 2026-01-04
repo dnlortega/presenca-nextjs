@@ -1,8 +1,8 @@
 "use client";
 import { useSession, signOut } from "next-auth/react";
 import { LucideShieldAlert, LucideLogOut } from "lucide-react";
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function PendingView() {
     const { data: session } = useSession();
