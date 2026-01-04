@@ -791,11 +791,11 @@ export default function AdminClient() {
                       <TableRow key={emp.id} className="border-muted/30 group">
                         <TableCell className="py-3 font-bold">{emp.nome || '-'}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || emp.empresa || '-')}
+                          {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || '-')}
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
-                            {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || emp.setor || '-')}
+                            {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || '-')}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
