@@ -16,10 +16,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         const { id } = await params;
         const { nome, empresa, setor } = await req.json();
 
-        await prisma.$executeRawUnsafe(
-            'UPDATE "funcionarios" SET nome = $1, empresa = $2, setor = $3 WHERE id = $4',
-            nome, empresa, setor, Number(id)
-        );
+        await prisma.funcionarios.update({
+            where: { id: Number(id) },
+            data: { nome, empresa, setor }
+        });
 
         return NextResponse.json({ success: true });
     } catch (err) {
@@ -36,7 +36,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         }
 
         const { id } = await params;
-        await prisma.$executeRawUnsafe('DELETE FROM "funcionarios" WHERE id = $1', Number(id));
+        await prisma.funcionarios.delete({
+            where: { id: Number(id) }
+        });
 
         return NextResponse.json({ success: true });
     } catch (err) {

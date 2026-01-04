@@ -8,10 +8,19 @@ export async function GET() {
     const session = await getServerSession(authOptions as any);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const s: any = session;
-    const usuario = await prisma.usuarios.findUnique({ where: { username: s.user.name } });
-    if (!usuario) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = s.user.id;
+    const role = s.user.role;
 
-    const mappings = await prisma.usuario_empresas.findMany({ where: { usuario_id: usuario.id } });
+    if (role === 'admin') {
+      const allCompanies = await prisma.empresas.findMany({
+        orderBy: { nome: 'asc' }
+      });
+      return NextResponse.json({ companies: allCompanies.map(c => c.nome) });
+    }
+
+    const mappings = await prisma.usuario_empresas.findMany({
+      where: { usuario_id: Number(userId) }
+    });
     const companies = mappings.map((m) => m.empresa);
     return NextResponse.json({ companies });
   } catch (err) {

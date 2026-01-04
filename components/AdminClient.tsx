@@ -256,13 +256,13 @@ export default function AdminClient() {
   };
 
   const filteredEmployees = employees.filter(emp =>
-    emp.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.empresa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.setor.toLowerCase().includes(searchTerm.toLowerCase())
+    (emp.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.empresa || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.setor || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredCompanies = companies.filter(comp =>
-    comp.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    (comp.nome || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const renderContent = () => {
@@ -665,6 +665,10 @@ export default function AdminClient() {
                     onChange={e => setEmpForm({ ...empForm, empresa: e.target.value })}
                   >
                     <option value="" disabled>Selecione uma empresa</option>
+                    {/* Caso a empresa atual não esteja na lista oficial, mostrar ela como opção */}
+                    {empForm.empresa && !companies.find(c => c.nome === empForm.empresa) && (
+                      <option value={empForm.empresa}>{empForm.empresa} (Não cadastrada)</option>
+                    )}
                     {companies.map(c => (
                       <option key={c.id} value={c.nome}>{c.nome}</option>
                     ))}

@@ -13,9 +13,9 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const employees = await prisma.$queryRawUnsafe<any[]>(
-            'SELECT id, nome, empresa, setor FROM "funcionarios" ORDER BY nome ASC'
-        );
+        const employees = await prisma.funcionarios.findMany({
+            orderBy: { nome: 'asc' }
+        });
         return NextResponse.json(employees);
     } catch (err) {
         console.error(err);
@@ -31,10 +31,9 @@ export async function POST(req: Request) {
         }
 
         const { nome, empresa, setor } = await req.json();
-        await prisma.$executeRawUnsafe(
-            'INSERT INTO "funcionarios" (nome, empresa, setor) VALUES ($1, $2, $3)',
-            nome, empresa, setor
-        );
+        await prisma.funcionarios.create({
+            data: { nome, empresa, setor }
+        });
 
         return NextResponse.json({ success: true });
     } catch (err) {

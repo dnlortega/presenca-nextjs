@@ -47,13 +47,13 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { funcionario, employees, empresa, sector, setor, status = 'present' } = body;
+    const { funcionario, employees, empresa, company, sector, setor, status = 'present' } = body;
 
-    const finalEmpresa = empresa;
+    const finalEmpresa = empresa || company;
     const finalSetor = setor || sector;
 
     if (!finalEmpresa || !finalSetor) {
-      return NextResponse.json({ error: 'Missing company or sector' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing company (empresa) or sector (setor)' }, { status: 400 });
     }
 
     // Handle both single and multiple employees
