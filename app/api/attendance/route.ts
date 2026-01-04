@@ -47,37 +47,52 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { funcionario, empresa, setor, status = 'present' } = body;
-    if (!funcionario || !empresa || !setor) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    const { funcionario, employees, empresa, sector, setor, status = 'present' } = body;
 
-    const { start, end, refDate } = getDayRange();
+    const finalEmpresa = empresa;
+    const finalSetor = setor || sector;
 
-    const existing = await prisma.presenca.findFirst({
-      where: {
-        funcionario,
-        empresa,
-        setor,
-        data_hora: {
-          gte: start,
-          lt: end,
-        },
-      },
-    });
-
-    if (existing) {
-      return NextResponse.json({ ok: false, error: 'Duplicate', existingId: existing.id }, { status: 409 });
+    if (!finalEmpresa || !finalSetor) {
+      return NextResponse.json({ error: 'Missing company or sector' }, { status: 400 });
     }
 
-    // Use refDate (Noon UTC of the local day) to ensure it saves as the correct date
-    const created = await prisma.presenca.create({
-      data: {
-        funcionario,
-        empresa,
-        setor,
-        data_hora: refDate
+    // Handle both single and multiple employees
+    const employeesList = Array.isArray(employees) ? employees : (funcionario ? [funcionario] : []);
+
+    if (employeesList.length === 0) {
+      return NextResponse.json({ error: 'No employees provided' }, { status: 400 });
+    }
+
+    const { start, end, refDate } = getDayRange();
+    let count = 0;
+
+    for (const name of employeesList) {
+      const existing = await prisma.presenca.findFirst({
+        where: {
+          funcionario: name,
+          empresa: finalEmpresa,
+          setor: finalSetor,
+          data_hora: {
+            gte: start,
+            lt: end,
+          },
+        },
+      });
+
+      if (!existing) {
+        await prisma.presenca.create({
+          data: {
+            funcionario: name,
+            empresa: finalEmpresa,
+            setor: finalSetor,
+            data_hora: refDate
+          }
+        });
+        count++;
       }
-    });
-    return NextResponse.json({ ok: true, data: created });
+    }
+
+    return NextResponse.json({ ok: true, count });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
