@@ -15,17 +15,28 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         const { id } = await params;
         const body = await req.json();
-        const { role } = body;
+        const { role, empresas } = body;
+        const userId = Number(id);
 
-        if (!role) {
-            return NextResponse.json({ error: 'Role is required' }, { status: 400 });
+        if (role) {
+            await prisma.$executeRawUnsafe(
+                'UPDATE "usuarios" SET "role" = $1::"Role", "updated_at" = NOW() WHERE "id" = $2',
+                role,
+                userId
+            );
         }
 
-        await prisma.$executeRawUnsafe(
-            'UPDATE "usuarios" SET "role" = $1::"Role", "updated_at" = NOW() WHERE "id" = $2',
-            role,
-            Number(id)
-        );
+        if (Array.isArray(empresas)) {
+            await prisma.$transaction([
+                prisma.usuario_empresas.deleteMany({ where: { usuario_id: userId } }),
+                prisma.usuario_empresas.createMany({
+                    data: empresas.map((emp: string) => ({
+                        usuario_id: userId,
+                        empresa: emp
+                    }))
+                })
+            ]);
+        }
 
         return NextResponse.json({ success: true });
     } catch (err) {

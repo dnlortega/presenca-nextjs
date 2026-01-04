@@ -59,6 +59,7 @@ type User = {
   email: string | null;
   role: string | null;
   created_at: string;
+  empresas?: string[];
 };
 
 type Company = {
@@ -74,8 +75,11 @@ export default function AdminClient() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
   const [isCompModalOpen, setIsCompModalOpen] = useState(false);
+  const [isUserCompModalOpen, setIsUserCompModalOpen] = useState(false);
   const [editingEmp, setEditingEmp] = useState<Employee | null>(null);
   const [editingComp, setEditingComp] = useState<Company | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userCompForm, setUserCompForm] = useState<string[]>([]);
   const [empForm, setEmpForm] = useState({ nome: '', empresa: '', setor: '' });
   const [compForm, setCompForm] = useState({ nome: '' });
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,6 +136,36 @@ export default function AdminClient() {
       if (res.ok) loadUsers();
       else alert('Erro ao atualizar cargo');
     } catch (e) { console.error(e); }
+  };
+
+  const updateUserCompanies = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    try {
+      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresas: userCompForm }),
+      });
+      if (res.ok) {
+        setIsUserCompModalOpen(false);
+        loadUsers();
+      } else alert('Erro ao atualizar empresas');
+    } catch (e) { console.error(e); }
+  };
+
+  const openUserCompModal = (user: User) => {
+    setSelectedUser(user);
+    setUserCompForm(user.empresas || []);
+    setIsUserCompModalOpen(true);
+  };
+
+  const toggleUserCompany = (companyName: string) => {
+    setUserCompForm(prev =>
+      prev.includes(companyName)
+        ? prev.filter(c => c !== companyName)
+        : [...prev, companyName]
+    );
   };
 
   const handleSaveEmployee = async (e: React.FormEvent) => {
@@ -235,31 +269,35 @@ export default function AdminClient() {
     switch (activeTab) {
       case 'overview':
         return (
-          <div className="space-y-6 page-transition">
+          <div className="space-y-6 animate-scale-in">
             <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm">
+              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Total Hoje</CardTitle>
                   <LucideUsers className="w-4 h-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-black">{dashboardData?.totalToday || 0}</div>
+                  <div className="text-2xl font-black">{dashboardData?.totalToday ?? (
+                    <div className="h-8 w-16 bg-muted/20 animate-shimmer rounded" />
+                  )}</div>
                   <p className="text-[10px] text-muted-foreground mt-1">+12% em relação a ontem</p>
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm">
+              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Setores Ativos</CardTitle>
                   <LucideBarChart className="w-4 h-4 text-indigo-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-black">{dashboardData?.sectorsActive || 0}</div>
+                  <div className="text-2xl font-black">{dashboardData?.sectorsActive ?? (
+                    <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" />
+                  )}</div>
                   <p className="text-[10px] text-muted-foreground mt-1">4 setores pendentes</p>
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm">
+              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Relatórios</CardTitle>
                   <LucideFileText className="w-4 h-4 text-purple-500" />
@@ -290,8 +328,8 @@ export default function AdminClient() {
                   {dashboardData?.trend ? (
                     <AttendanceChart data={dashboardData.trend} />
                   ) : (
-                    <div className="h-64 flex items-center justify-center">
-                      <div className="animate-spin w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full" />
+                    <div className="h-64 w-full bg-muted/20 rounded-xl animate-shimmer relative overflow-hidden flex items-center justify-center">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Carregando métricas...</div>
                     </div>
                   )}
                 </CardContent>
@@ -497,6 +535,9 @@ export default function AdminClient() {
                           <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => updateUserRole(u.id, 'admin')}>
                             ADMIN
                           </Button>
+                          <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => openUserCompModal(u)}>
+                            EMPRESAS
+                          </Button>
                           {u.role !== 'pendente' && (
                             <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-0 h-7 rounded-md text-muted-foreground hover:text-destructive" onClick={() => updateUserRole(u.id, 'pendente')}>
                               BLOQUEAR
@@ -528,7 +569,7 @@ export default function AdminClient() {
       {/* Sidebar */}
       <aside className="w-64 shrink-0 border-r border-border bg-card/30 backdrop-blur-xl hidden lg:block p-6">
         <div className="sticky top-6 flex flex-col h-[calc(100vh-48px)]">
-          <div className="mb-8 flex items-center justify-between">
+          <div className="mb-8 flex items-center justify-between animate-float">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
                 <LucideShieldCheck className="w-5 h-5" />
@@ -672,6 +713,40 @@ export default function AdminClient() {
                   <Button type="submit">Confirmar</Button>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* User Companies Modal */}
+      {isUserCompModalOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm shadow-2xl border-border">
+            <CardHeader>
+              <CardTitle className="text-lg">Liberar Empresas</CardTitle>
+              <CardDescription>Selecione as empresas que <b>{selectedUser?.username}</b> pode gerenciar.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {companies.map(comp => (
+                  <label key={comp.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={userCompForm.includes(comp.nome)}
+                      onChange={() => toggleUserCompany(comp.nome)}
+                    />
+                    <span className="text-xs font-bold">{comp.nome}</span>
+                  </label>
+                ))}
+                {companies.length === 0 && (
+                  <p className="text-center text-xs text-muted-foreground py-4 italic">Nenhuma empresa cadastrada.</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2 pt-6">
+                <Button variant="ghost" type="button" onClick={() => setIsUserCompModalOpen(false)}>Cancelar</Button>
+                <Button onClick={updateUserCompanies}>Salvar Acessos</Button>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -13,11 +13,29 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const users = await prisma.$queryRawUnsafe<any[]>(
-            'SELECT id, username, email, role, created_at FROM "usuarios" ORDER BY created_at DESC'
-        );
+        const users = await prisma.usuarios.findMany({
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                role: true,
+                created_at: true,
+                usuario_empresas: {
+                    select: {
+                        empresa: true
+                    }
+                }
+            },
+            orderBy: { created_at: 'desc' }
+        });
 
-        return NextResponse.json(users);
+        // Flatten the relationship for easier consumption
+        const formattedUsers = users.map(u => ({
+            ...u,
+            empresas: u.usuario_empresas.map(ue => ue.empresa)
+        }));
+
+        return NextResponse.json(formattedUsers);
     } catch (err) {
         console.error('Erro ao buscar usuários:', err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });

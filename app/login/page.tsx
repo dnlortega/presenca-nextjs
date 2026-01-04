@@ -53,16 +53,16 @@ export default function LoginPage() {
         <ModeToggle />
       </div>
 
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm space-y-6 animate-scale-in">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 mx-auto mb-4">
+          <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 mx-auto mb-4 animate-float">
             <LucideShieldCheck className="w-7 h-7" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase">Presença<span className="text-primary">.Pro</span></h1>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Controle Inteligente de Frequência</p>
+          <h1 className="text-3xl font-black tracking-tighter uppercase animate-slide-up [animation-delay:200ms]">Presença<span className="text-primary italic">.Pro</span></h1>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest animate-slide-up [animation-delay:300ms]">Controle Inteligente de Frequência</p>
         </div>
 
-        <Card className="border-none shadow-2xl bg-card/50 backdrop-blur-xl rounded-3xl overflow-hidden">
+        <Card className="border-none shadow-2xl bg-card/50 backdrop-blur-xl rounded-3xl overflow-hidden hover-lift transition-all animate-slide-up [animation-delay:400ms]">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-black tracking-tight">Entrar no Sistema</CardTitle>
             <CardDescription className="text-xs">Digite seus dados para acessar sua conta.</CardDescription>

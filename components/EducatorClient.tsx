@@ -136,13 +136,13 @@ export default function EducatorClient() {
       </header>
 
       {/* Steps indicator */}
-      <div className="flex gap-1.5 mb-8">
+      <div className="flex gap-1.5 mb-8 animate-slide-up [animation-delay:200ms]">
         {[1, 2, 3].map(i => (
           <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${step >= i ? 'bg-primary' : 'bg-muted'}`} />
         ))}
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 animate-scale-in [animation-delay:400ms]">
         {feedback && (
           <div className={`p-4 rounded-xl text-xs font-bold animate-in fade-in slide-in-from-top-2 flex items-center gap-2 ${feedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
             'bg-destructive/10 text-destructive border border-destructive/20'
@@ -163,7 +163,7 @@ export default function EducatorClient() {
                 key={c}
                 variant="outline"
                 onClick={() => { setSelectedCompany(c); loadSectors(c); }}
-                className="w-full justify-between h-14 rounded-2xl border-muted-foreground/10 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                className="w-full justify-between h-14 rounded-2xl border-muted-foreground/10 hover:border-primary/50 hover:bg-primary/5 hover-lift transition-all group"
               >
                 <span className="font-bold text-sm tracking-tight">{c}</span>
                 <LucideChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-1" />
