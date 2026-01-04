@@ -16,7 +16,12 @@ export async function GET() {
         const reports = await prisma.presenca.findMany({
             orderBy: { id: 'desc' },
             include: {
-                funcionario: true
+                funcionario: {
+                    include: {
+                        setor: true,
+                        empresa: true
+                    }
+                }
             }
         });
 
@@ -24,8 +29,8 @@ export async function GET() {
             id: r.id,
             data_hora: r.data_hora,
             funcionario: r.funcionario.nome,
-            setor: r.funcionario.setor,
-            empresa: r.funcionario.empresa
+            setor: r.funcionario.setor.nome,
+            empresa: r.funcionario.empresa.nome
         }));
 
         return NextResponse.json(formatted);
