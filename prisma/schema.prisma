@@ -8,27 +8,38 @@ datasource db {
 }
 
 model funcionarios {
-  id      Int    @id @default(autoincrement())
-  nome    String @db.VarChar(255)
-  empresa String @db.VarChar(255)
-  setor   String @db.VarChar(255)
+  id         Int        @id @default(autoincrement())
+  nome       String     @db.VarChar(255)
+  valor      Decimal?   @db.Decimal(10, 2)
+  empresa_id Int
+  setor_id   Int
+  empresa    empresas   @relation(fields: [empresa_id], references: [id])
+  setor      setores    @relation(fields: [setor_id], references: [id])
+  presencas  presenca[]
 }
 
 model presenca {
-  id          Int      @id @default(autoincrement())
-  empresa     String   @db.VarChar(255)
-  setor       String   @db.VarChar(255)
-  funcionario String   @db.VarChar(255)
-  data_hora   DateTime @default(now()) @db.Date
+  id             Int          @id @default(autoincrement())
+  funcionario_id Int
+  funcionario    funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+  data_hora      DateTime     @default(now()) @db.Date
 }
 
-// model users removed
+model setores {
+  id           Int            @id @default(autoincrement())
+  nome         String         @db.VarChar(255)
+  empresa_id   Int
+  empresa      empresas       @relation(fields: [empresa_id], references: [id], onDelete: Cascade)
+  status       String?        @default("ativo")
+  funcionarios funcionarios[]
+}
 
 model usuario_empresas {
   id         Int      @id @default(autoincrement())
   usuario_id Int
-  empresa    String   @db.VarChar(255)
+  empresa_id Int
   usuarios   usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  empresa    empresas @relation(fields: [empresa_id], references: [id], onDelete: Cascade)
 }
 
 model usuarios {
@@ -44,8 +55,11 @@ model usuarios {
 }
 
 model empresas {
-  id   Int    @id @default(autoincrement())
-  nome String @unique @db.VarChar(255)
+  id               Int                @id @default(autoincrement())
+  nome             String             @unique @db.VarChar(255)
+  setores          setores[]
+  funcionarios     funcionarios[]
+  usuario_empresas usuario_empresas[]
 }
 
 enum Role {

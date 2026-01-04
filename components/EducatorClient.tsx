@@ -29,7 +29,7 @@ export default function EducatorClient() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const [presentToday, setPresentToday] = useState<{ id: number, funcionario: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
@@ -90,9 +90,9 @@ export default function EducatorClient() {
     setLoading(false);
   };
 
-  const toggleEmployee = (name: string) => {
+  const toggleEmployee = (id: number) => {
     setSelectedEmployees(prev =>
-      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+      prev.includes(id) ? prev.filter(n => n !== id) : [...prev, id]
     );
   };
 
@@ -103,9 +103,7 @@ export default function EducatorClient() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          company: selectedCompany,
-          sector: selectedSector,
-          employees: selectedEmployees,
+          employeeIds: selectedEmployees,
         }),
       });
       const result = await res.json();
@@ -236,14 +234,14 @@ export default function EducatorClient() {
             <div className="grid grid-cols-1 gap-2.5 pb-24">
               {employees.length > 0 ? (
                 employees.map(emp => {
-                  const isAlreadyPresent = presentToday.find(p => p.funcionario === emp.nome);
-                  const isSelected = selectedEmployees.includes(emp.nome);
+                  const isAlreadyPresent = presentToday.find(p => p.funcionario_id === emp.id);
+                  const isSelected = selectedEmployees.includes(emp.id);
 
                   return (
                     <div key={emp.id} className="relative group">
                       <button
                         disabled={!!isAlreadyPresent}
-                        onClick={() => toggleEmployee(emp.nome)}
+                        onClick={() => toggleEmployee(emp.id)}
                         className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all text-left ${isAlreadyPresent
                           ? 'bg-emerald-500/5 border-emerald-500/50 opacity-80 cursor-default'
                           : isSelected

@@ -19,9 +19,10 @@ export async function GET() {
     }
 
     const mappings = await prisma.usuario_empresas.findMany({
-      where: { usuario_id: Number(userId) }
+      where: { usuario_id: Number(userId) },
+      include: { empresa: true }
     });
-    const companies = mappings.map((m) => m.empresa);
+    const companies = mappings.map((m) => m.empresa.nome);
     return NextResponse.json({ companies });
   } catch (err) {
     console.error(err);

@@ -15,7 +15,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         const { id } = await params;
         const body = await req.json();
-        const { role, empresas } = body;
+        const { role, empresas } = body; // empresas: array of names
         const userId = Number(id);
 
         if (role) {
@@ -27,12 +27,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         if (Array.isArray(empresas)) {
+            // Find IDs for the names provided
+            const dbCompanies = await prisma.empresas.findMany({
+                where: {
+                    nome: { in: empresas }
+                }
+            });
+
             await prisma.$transaction([
                 prisma.usuario_empresas.deleteMany({ where: { usuario_id: userId } }),
                 prisma.usuario_empresas.createMany({
-                    data: empresas.map((emp: string) => ({
+                    data: dbCompanies.map((c) => ({
                         usuario_id: userId,
-                        empresa: emp
+                        empresa_id: c.id
                     }))
                 })
             ]);

@@ -41,7 +41,7 @@ export async function GET() {
 
         // 2. Active Sectors Today with counts
         const sectorStats: any[] = await prisma.$queryRawUnsafe(
-            'SELECT "setor", "empresa", COUNT(*)::int as count FROM "presenca" WHERE "data_hora" >= $1 AND "data_hora" < $2 GROUP BY "setor", "empresa" ORDER BY count DESC',
+            'SELECT f."setor", f."empresa", COUNT(*)::int as count FROM "presenca" p JOIN "funcionarios" f ON p."funcionario_id" = f.id WHERE p."data_hora" >= $1 AND p."data_hora" < $2 GROUP BY f."setor", f."empresa" ORDER BY count DESC',
             startToday, endToday
         );
         const sectorsActive = sectorStats.length;
@@ -69,13 +69,13 @@ export async function GET() {
 
         // 4. Recent Activity (Last 5 presence records)
         const recentActivities = await prisma.$queryRawUnsafe<any[]>(
-            'SELECT id, funcionario, setor, empresa, data_hora FROM "presenca" ORDER BY id DESC LIMIT 5'
+            'SELECT p.id, f.nome as funcionario, f.setor, f.empresa, p.data_hora FROM "presenca" p JOIN "funcionarios" f ON p."funcionario_id" = f.id ORDER BY p.id DESC LIMIT 5'
         );
 
         return NextResponse.json({
             totalToday,
             sectorsActive,
-            sectorStats, // New detailed stats
+            sectorStats,
             trend,
             recentActivities
         });

@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export async function GET() {
     try {
@@ -13,26 +12,12 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const employees = await prisma.funcionarios.findMany({
-            include: {
-                empresa: true,
-                setor: true
-            },
+        const sectors = await prisma.setores.findMany({
+            include: { empresa: true },
             orderBy: { nome: 'asc' }
         });
 
-        // Remap to include names for the frontend
-        const formatted = employees.map(e => ({
-            id: e.id,
-            nome: e.nome,
-            valor: e.valor ? Number(e.valor) : null,
-            empresa_id: e.empresa_id,
-            setor_id: e.setor_id,
-            empresa: e.empresa.nome,
-            setor: e.setor.nome
-        }));
-
-        return NextResponse.json(formatted);
+        return NextResponse.json(sectors);
     } catch (err) {
         console.error(err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
@@ -46,22 +31,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { nome, empresa_id, setor_id, valor } = await req.json();
+        const { nome, empresa_id } = await req.json();
 
-        if (!nome || !empresa_id || !setor_id) {
-            return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 });
+        if (!nome || !empresa_id) {
+            return NextResponse.json({ error: 'Nome e Empresa são obrigatórios' }, { status: 400 });
         }
 
-        await prisma.funcionarios.create({
+        const sector = await prisma.setores.create({
             data: {
                 nome,
-                empresa_id: Number(empresa_id),
-                setor_id: Number(setor_id),
-                valor: valor ? Number(valor) : null
+                empresa_id: Number(empresa_id)
             }
         });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json(sector);
     } catch (err) {
         console.error(err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });

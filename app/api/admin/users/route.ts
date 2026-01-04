@@ -22,7 +22,11 @@ export async function GET() {
                 created_at: true,
                 usuario_empresas: {
                     select: {
-                        empresa: true
+                        empresa: {
+                            select: {
+                                nome: true
+                            }
+                        }
                     }
                 }
             },
@@ -32,7 +36,7 @@ export async function GET() {
         // Flatten the relationship for easier consumption
         const formattedUsers = users.map(u => ({
             ...u,
-            empresas: u.usuario_empresas.map(ue => ue.empresa)
+            empresas: u.usuario_empresas.map(ue => ue.empresa.nome)
         }));
 
         return NextResponse.json(formattedUsers);
