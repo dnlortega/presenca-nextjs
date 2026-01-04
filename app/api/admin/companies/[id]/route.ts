@@ -8,7 +8,7 @@ export const revalidate = 0;
 
 export async function PUT(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions as any);
@@ -16,15 +16,16 @@ export async function PUT(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
+        const { id } = await params;
         const { nome } = await req.json();
-        const id = parseInt(params.id);
+        const companyId = parseInt(id);
 
         if (!nome) {
             return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
         }
 
         const company = await prisma.empresas.update({
-            where: { id },
+            where: { id: companyId },
             data: { nome }
         });
 
@@ -40,7 +41,7 @@ export async function PUT(
 
 export async function DELETE(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions as any);
@@ -48,10 +49,11 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const id = parseInt(params.id);
+        const { id } = await params;
+        const companyId = parseInt(id);
 
         await prisma.empresas.delete({
-            where: { id }
+            where: { id: companyId }
         });
 
         return NextResponse.json({ success: true });
