@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../lib/auth';
+import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import PendingView from '../components/PendingView';
-import SessionProviderWrapper from '../components/SessionProviderWrapper';
+import PendingView from '@/components/PendingView';
+import SessionProviderWrapper from '@/components/SessionProviderWrapper';
 
 export default async function Page() {
   const session = await getServerSession(authOptions as any);
@@ -11,7 +11,7 @@ export default async function Page() {
     redirect('/login');
   }
 
-  const role = (session.user as any)?.role;
+  const role = (session as any).user?.role;
 
   if (role === 'pendente' || !role) {
     return (
