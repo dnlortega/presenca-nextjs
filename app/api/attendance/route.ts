@@ -79,27 +79,44 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const empresa = searchParams.get('empresa');
-    const setor = searchParams.get('setor');
+    const empresaNome = searchParams.get('empresa');
+    const setorNome = searchParams.get('setor');
 
-    if (!empresa || !setor) {
+    if (!empresaNome || !setorNome) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
     const { start, end } = getDayRange();
 
-    const empresaId = Number(empresa);
-    const setorId = Number(setor);
+    // Find company by name
+    const empresa = await prisma.empresas.findFirst({
+      where: { nome: empresaNome }
+    });
 
-    if (isNaN(empresaId) || isNaN(setorId)) {
-      return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 });
+    if (!empresa) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    }
+
+    // Find sector by name (within the company) - case insensitive
+    const setor = await prisma.setores.findFirst({
+      where: {
+        nome: {
+          equals: setorNome,
+          mode: 'insensitive'
+        },
+        empresa_id: empresa.id
+      }
+    });
+
+    if (!setor) {
+      return NextResponse.json({ error: 'Sector not found' }, { status: 404 });
     }
 
     const records = await prisma.presenca.findMany({
       where: {
         funcionario: {
-          empresa_id: empresaId,
-          setor_id: setorId,
+          empresa_id: empresa.id,
+          setor_id: setor.id,
         },
         data_hora: {
           gte: start,
@@ -123,7 +140,7 @@ export async function GET(req: Request) {
       funcionario: r.funcionario.nome
     })));
   } catch (err) {
-    console.error(err);
+    console.error('Error in GET /api/attendance:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

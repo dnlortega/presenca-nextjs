@@ -36,16 +36,45 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // 3. Build query
+    // 3. Build query - need to get IDs from names
     let where: any = {};
+
     if (companyName) {
-      where.empresa = { nome: companyName };
+      // Find company by name to get ID
+      const company = await prisma.empresas.findFirst({
+        where: { nome: companyName }
+      });
+
+      if (!company) {
+        return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+      }
+
+      where.empresa_id = company.id;
     } else {
-      where.empresa = { nome: { in: allowedCompanyNames } };
+      // Get IDs of allowed companies
+      const companies = await prisma.empresas.findMany({
+        where: { nome: { in: allowedCompanyNames } }
+      });
+      where.empresa_id = { in: companies.map(c => c.id) };
     }
 
     if (sectorName) {
-      where.setor = { nome: sectorName };
+      // Find sector by name (within the company context) - case insensitive
+      const sector = await prisma.setores.findFirst({
+        where: {
+          nome: {
+            equals: sectorName,
+            mode: 'insensitive'
+          },
+          ...(where.empresa_id && typeof where.empresa_id === 'number' ? { empresa_id: where.empresa_id } : {})
+        }
+      });
+
+      if (!sector) {
+        return NextResponse.json({ error: 'Sector not found' }, { status: 404 });
+      }
+
+      where.setor_id = sector.id;
     }
 
     const list = await prisma.funcionarios.findMany({
@@ -69,7 +98,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(formatted);
   } catch (err) {
-    console.error(err);
+    console.error('Error in /api/employees:', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
