@@ -39,12 +39,12 @@ export async function GET() {
         );
         const totalToday = totalCounts[0]?.count || 0;
 
-        // 2. Active Sectors Today
-        const sectors: any[] = await prisma.$queryRawUnsafe(
-            'SELECT DISTINCT "setor" FROM "presenca" WHERE "data_hora" >= $1 AND "data_hora" < $2',
+        // 2. Active Sectors Today with counts
+        const sectorStats: any[] = await prisma.$queryRawUnsafe(
+            'SELECT "setor", "empresa", COUNT(*)::int as count FROM "presenca" WHERE "data_hora" >= $1 AND "data_hora" < $2 GROUP BY "setor", "empresa" ORDER BY count DESC',
             startToday, endToday
         );
-        const sectorsActive = sectors.length;
+        const sectorsActive = sectorStats.length;
 
         // 3. Weekly Trend (Last 7 days)
         const trend = [];
@@ -75,6 +75,7 @@ export async function GET() {
         return NextResponse.json({
             totalToday,
             sectorsActive,
+            sectorStats, // New detailed stats
             trend,
             recentActivities
         });

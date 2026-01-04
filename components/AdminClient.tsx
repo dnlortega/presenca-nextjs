@@ -42,6 +42,7 @@ type RecentActivity = {
 type DashboardData = {
   totalToday: number;
   sectorsActive: number;
+  sectorStats?: { setor: string; empresa: string; count: number }[];
   trend: { date: string; present: number; absent: number }[];
   recentActivities: RecentActivity[];
 };
@@ -362,6 +363,41 @@ export default function AdminClient() {
                   <Button variant="ghost" className="w-full text-xs font-bold text-primary">
                     Ver histórico <LucideChevronRight className="w-3 h-3 ml-1" />
                   </Button>
+                </CardContent>
+              </Card>
+
+              {/* New Sector Presence Statistics Card */}
+              <Card className="border-none shadow-sm lg:col-span-3">
+                <CardHeader>
+                  <CardTitle className="text-lg">Setores com Presença (Hoje)</CardTitle>
+                  <CardDescription>Acompanhamento por setor e quantidade de registros.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {dashboardData?.sectorStats && dashboardData.sectorStats.length > 0 ? (
+                      dashboardData.sectorStats.map((stat, idx) => (
+                        <div key={idx} className="flex flex-col p-4 rounded-2xl bg-muted/30 border border-border/50 hover-lift transition-all">
+                          <div className="flex items-center justify-between mb-2">
+                            <Badge variant="outline" className="text-[10px] font-black border-primary/20 text-primary bg-primary/5">
+                              {stat.empresa}
+                            </Badge>
+                            <span className="text-lg font-black text-primary">{stat.count}</span>
+                          </div>
+                          <span className="text-sm font-bold truncate">{stat.setor}</span>
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+                            <div
+                              className="bg-primary h-full rounded-full transition-all duration-1000"
+                              style={{ width: `${Math.min((stat.count / (dashboardData.totalToday || 1)) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full py-10 text-center text-muted-foreground text-xs italic bg-muted/10 rounded-2xl border border-dashed">
+                        Nenhuma presença registrada hoje.
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </section>
