@@ -85,6 +85,8 @@ export const authOptions: NextAuthOptions = {
 
                 token.role = dbUser?.role || 'pendente';
                 token.id = dbUser?.id;
+                token.can_register = dbUser?.can_register || false;
+                token.can_edit = dbUser?.can_edit || false;
             }
             return token;
         },
@@ -92,6 +94,8 @@ export const authOptions: NextAuthOptions = {
             if (session.user) {
                 (session.user as any).role = token.role;
                 (session.user as any).id = token.id;
+                (session.user as any).can_register = token.can_register;
+                (session.user as any).can_edit = token.can_edit;
             }
             return session;
         }

@@ -46,6 +46,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             ]);
         }
 
+        if (typeof body.can_register === 'boolean') {
+            await prisma.usuarios.update({
+                where: { id: userId },
+                data: { can_register: body.can_register }
+            });
+        }
+
+        if (typeof body.can_edit === 'boolean') {
+            await prisma.usuarios.update({
+                where: { id: userId },
+                data: { can_edit: body.can_edit }
+            });
+        }
+
         return jsonResponse({ success: true });
     } catch (err) {
         console.error('Erro ao atualizar cargo:', err);

@@ -60,6 +60,7 @@ model usuarios {
   password_hash    String?            @db.VarChar(255)
   role             Role?
   can_register     Boolean            @default(false)
+  can_edit         Boolean            @default(false)
   created_at       DateTime           @default(now())
   updated_at       DateTime           @updatedAt
   usuario_empresas usuario_empresas[]

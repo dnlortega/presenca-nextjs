@@ -78,6 +78,8 @@ type User = {
   username: string;
   email: string | null;
   role: string | null;
+  can_register?: boolean;
+  can_edit?: boolean;
   created_at: string;
   empresas?: string[];
 };
@@ -147,9 +149,9 @@ export default function AdminClient() {
         setDashboardError(data.error || 'Erro ao carregar dashboard');
         console.error('Dashboard error:', data);
       }
-    } catch (e) { 
+    } catch (e) {
       setDashboardError('Erro ao conectar com o servidor');
-      console.error('Dashboard fetch error:', e); 
+      console.error('Dashboard fetch error:', e);
     } finally {
       setIsLoadingDashboard(false);
     }
@@ -205,12 +207,12 @@ export default function AdminClient() {
     if (!confirm('Deseja criar 20 funcionários em cada setor cadastrado? Esta ação pode demorar alguns segundos.')) {
       return;
     }
-    
+
     setIsSeedingEmployees(true);
     try {
       const res = await fetchNoCache('/api/admin/seed-employees', { method: 'POST' });
       const data = await res.json();
-      
+
       if (res.ok) {
         alert(`✅ Sucesso!\n\nTotal criado: ${data.totalCriados} funcionários\nSetores processados: ${data.totalSetores}\n\nRecarregando lista...`);
         loadEmployees();
@@ -234,6 +236,30 @@ export default function AdminClient() {
       });
       if (res.ok) loadUsers();
       else alert('Erro ao atualizar cargo');
+    } catch (e) { console.error(e); }
+  };
+
+  const updateUserCanRegister = async (userId: number, canRegister: boolean) => {
+    try {
+      const res = await fetchNoCache(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ can_register: canRegister }),
+      });
+      if (res.ok) loadUsers();
+      else alert('Erro ao atualizar permissão de cadastro');
+    } catch (e) { console.error(e); }
+  };
+
+  const updateUserCanEdit = async (userId: number, canEdit: boolean) => {
+    try {
+      const res = await fetchNoCache(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ can_edit: canEdit }),
+      });
+      if (res.ok) loadUsers();
+      else alert('Erro ao atualizar permissão de edição');
     } catch (e) { console.error(e); }
   };
 
@@ -457,9 +483,9 @@ export default function AdminClient() {
                   <div className="flex items-center gap-2 text-destructive text-sm">
                     <LucideAlertCircle className="w-4 h-4" />
                     <span>{dashboardError}</span>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={loadDashboard}
                       className="ml-auto text-xs"
                     >
@@ -651,94 +677,94 @@ export default function AdminClient() {
                           <TableRow key={comp.id} className="border-muted/30 group hover:bg-muted/10 transition-colors">
                             <TableCell className="py-4 font-black text-xs">{comp.nome}</TableCell>
                             <TableCell className="py-4">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                                  {companySectors.length} {companySectors.length === 1 ? 'Setor' : 'Setores'}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 text-[9px] font-black uppercase tracking-widest hover:bg-primary/20 hover:text-primary transition-all rounded-lg px-2"
-                                  onClick={() => {
-                                    setEditingSector(null);
-                                    setSectorForm({ nome: '', empresa_id: String(comp.id) });
-                                    setIsSectorModalOpen(true);
-                                  }}
-                                >
-                                  <LucidePlus className="w-3 h-3 mr-1" /> Novo
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                    {companySectors.length} {companySectors.length === 1 ? 'Setor' : 'Setores'}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-[9px] font-black uppercase tracking-widest hover:bg-primary/20 hover:text-primary transition-all rounded-lg px-2"
+                                    onClick={() => {
+                                      setEditingSector(null);
+                                      setSectorForm({ nome: '', empresa_id: String(comp.id) });
+                                      setIsSectorModalOpen(true);
+                                    }}
+                                  >
+                                    <LucidePlus className="w-3 h-3 mr-1" /> Novo
+                                  </Button>
+                                </div>
+
+                                {companySectors.length > 0 ? (
+                                  <div className="border border-border/50 rounded-lg overflow-hidden bg-muted/20">
+                                    <table className="w-full text-xs">
+                                      <thead className="bg-muted/40">
+                                        <tr className="border-b border-border/50">
+                                          <th className="text-left py-1.5 px-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Setor</th>
+                                          <th className="text-right py-1.5 px-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground w-20">Ações</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {companySectors.map((s, idx) => (
+                                          <tr key={s.id} className={`group/row hover:bg-primary/5 transition-colors ${idx !== companySectors.length - 1 ? 'border-b border-border/30' : ''}`}>
+                                            <td className="py-2 px-3 font-bold text-[10px]">{s.nome}</td>
+                                            <td className="py-2 px-3 text-right">
+                                              <div className="flex justify-end gap-0.5 opacity-60 group-hover/row:opacity-100 transition-opacity">
+                                                <button
+                                                  onClick={() => openSectorModal(s)}
+                                                  className="h-6 w-6 rounded-md hover:bg-primary/20 hover:text-primary transition-all flex items-center justify-center"
+                                                  title="Editar Setor"
+                                                >
+                                                  <LucideEdit className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                  onClick={() => handleDeleteSector(s.id)}
+                                                  className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
+                                                  title="Excluir Setor"
+                                                >
+                                                  <LucideTrash className="w-3 h-3" />
+                                                </button>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                ) : (
+                                  <div className="py-6 text-center border border-dashed border-border/50 rounded-lg bg-muted/10">
+                                    <LucideLayers className="w-6 h-6 mx-auto mb-1 opacity-20" />
+                                    <span className="text-[9px] text-muted-foreground italic font-medium block">Nenhum setor cadastrado</span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-lg" onClick={() => openCompModal(comp)}>
+                                  <LucideEdit className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg" onClick={() => handleDeleteCompany(comp.id)}>
+                                  <LucideTrash className="w-3.5 h-3.5" />
                                 </Button>
                               </div>
-
-                              {companySectors.length > 0 ? (
-                                <div className="border border-border/50 rounded-lg overflow-hidden bg-muted/20">
-                                  <table className="w-full text-xs">
-                                    <thead className="bg-muted/40">
-                                      <tr className="border-b border-border/50">
-                                        <th className="text-left py-1.5 px-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">Setor</th>
-                                        <th className="text-right py-1.5 px-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground w-20">Ações</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {companySectors.map((s, idx) => (
-                                        <tr key={s.id} className={`group/row hover:bg-primary/5 transition-colors ${idx !== companySectors.length - 1 ? 'border-b border-border/30' : ''}`}>
-                                          <td className="py-2 px-3 font-bold text-[10px]">{s.nome}</td>
-                                          <td className="py-2 px-3 text-right">
-                                            <div className="flex justify-end gap-0.5 opacity-60 group-hover/row:opacity-100 transition-opacity">
-                                              <button
-                                                onClick={() => openSectorModal(s)}
-                                                className="h-6 w-6 rounded-md hover:bg-primary/20 hover:text-primary transition-all flex items-center justify-center"
-                                                title="Editar Setor"
-                                              >
-                                                <LucideEdit className="w-3 h-3" />
-                                              </button>
-                                              <button
-                                                onClick={() => handleDeleteSector(s.id)}
-                                                className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
-                                                title="Excluir Setor"
-                                              >
-                                                <LucideTrash className="w-3 h-3" />
-                                              </button>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              ) : (
-                                <div className="py-6 text-center border border-dashed border-border/50 rounded-lg bg-muted/10">
-                                  <LucideLayers className="w-6 h-6 mx-auto mb-1 opacity-20" />
-                                  <span className="text-[9px] text-muted-foreground italic font-medium block">Nenhum setor cadastrado</span>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-lg" onClick={() => openCompModal(comp)}>
-                                <LucideEdit className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg" onClick={() => handleDeleteCompany(comp.id)}>
-                                <LucideTrash className="w-3.5 h-3.5" />
-                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {filteredCompanies.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="py-16 text-center">
+                            <div className="flex flex-col items-center gap-2 opacity-30">
+                              <LucideBuilding className="w-10 h-10" />
+                              <span className="text-[10px] font-black uppercase tracking-widest">Nenhuma empresa encontrada</span>
                             </div>
                           </TableCell>
                         </TableRow>
-                      );
-                    })}
-                    {filteredCompanies.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={3} className="py-16 text-center">
-                          <div className="flex flex-col items-center gap-2 opacity-30">
-                            <LucideBuilding className="w-10 h-10" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Nenhuma empresa encontrada</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
 
                 {/* Mobile Card View */}
@@ -956,9 +982,9 @@ export default function AdminClient() {
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button 
-                    size="sm" 
-                    onClick={seedEmployees} 
+                  <Button
+                    size="sm"
+                    onClick={seedEmployees}
                     className="font-bold rounded-lg px-4 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
                     disabled={isSeedingEmployees || sectors.length === 0}
                   >
@@ -1095,10 +1121,34 @@ export default function AdminClient() {
                                 <LucideClock className="w-3 h-3 mr-1" /> Pendente
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'border-primary/30 text-primary bg-primary/5' : 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5'
-                                }`}>
-                                <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
-                              </Badge>
+                              <div className="flex flex-col gap-1 items-start">
+                                <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'border-primary/30 text-primary bg-primary/5' : 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5'
+                                  }`}>
+                                  <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
+                                </Badge>
+                                {u.role === 'educador' && (
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => updateUserCanRegister(u.id, !u.can_register)}
+                                      className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border transition-all ${u.can_register
+                                        ? 'border-blue-500/30 text-blue-500 bg-blue-500/5 hover:bg-blue-500/10'
+                                        : 'border-muted-foreground/30 text-muted-foreground bg-muted/5 hover:bg-muted/10'
+                                        }`}
+                                    >
+                                      {u.can_register ? 'Cadastra: SIM' : 'Cadastra: NÃO'}
+                                    </button>
+                                    <button
+                                      onClick={() => updateUserCanEdit(u.id, !u.can_edit)}
+                                      className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border transition-all ${u.can_edit
+                                        ? 'border-purple-500/30 text-purple-500 bg-purple-500/5 hover:bg-purple-500/10'
+                                        : 'border-muted-foreground/30 text-muted-foreground bg-muted/5 hover:bg-muted/10'
+                                        }`}
+                                    >
+                                      {u.can_edit ? 'Edita: SIM' : 'Edita: NÃO'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </TableCell>
                           <TableCell className="text-right space-x-1">
@@ -1329,20 +1379,18 @@ export default function AdminClient() {
     <div className="min-h-screen bg-muted/30 lg:flex p-2 gap-2 overflow-hidden">
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar - Shadcn Inset Style */}
-      <aside className={`shrink-0 bg-background/60 backdrop-blur-xl flex flex-col rounded-2xl border border-border/50 shadow-sm overflow-hidden relative transition-all duration-300 ease-in-out ${
-        isSidebarCollapsed && !isMobileMenuOpen ? 'w-[80px] p-4' : 'w-64 p-6'
-      } ${
-        isMobileMenuOpen 
-          ? 'fixed left-2 top-2 bottom-2 z-50 lg:relative lg:left-0 lg:top-0 lg:bottom-0' 
+      <aside className={`shrink-0 bg-background/60 backdrop-blur-xl flex flex-col rounded-2xl border border-border/50 shadow-sm overflow-hidden relative transition-all duration-300 ease-in-out ${isSidebarCollapsed && !isMobileMenuOpen ? 'w-[80px] p-4' : 'w-64 p-6'
+        } ${isMobileMenuOpen
+          ? 'fixed left-2 top-2 bottom-2 z-50 lg:relative lg:left-0 lg:top-0 lg:bottom-0'
           : 'hidden lg:flex'
-      }`}>
+        }`}>
 
         {/* Close Button Mobile */}
         <button
