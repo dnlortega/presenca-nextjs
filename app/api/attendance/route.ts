@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import prisma from '../../../lib/prisma';
+import { jsonResponse } from '../../../lib/api-helpers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 
@@ -32,13 +33,13 @@ function getDayRange() {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions as any);
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
     const { employeeIds } = body;
 
     if (!employeeIds || !Array.isArray(employeeIds)) {
-      return NextResponse.json({ error: 'No employee IDs provided' }, { status: 400 });
+      return jsonResponse({ error: 'No employee IDs provided' }, { status: 400 });
     }
 
     const { start, end, refDate } = getDayRange();
@@ -69,10 +70,10 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, count });
+    return jsonResponse({ ok: true, count });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return jsonResponse({ error: 'Server error' }, { status: 500 });
   }
 }
 
@@ -83,7 +84,7 @@ export async function GET(req: Request) {
     const setorNome = searchParams.get('setor');
 
     if (!empresaNome || !setorNome) {
-      return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
+      return jsonResponse({ error: 'Missing parameters' }, { status: 400 });
     }
 
     const { start, end } = getDayRange();
@@ -94,7 +95,7 @@ export async function GET(req: Request) {
     });
 
     if (!empresa) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+      return jsonResponse({ error: 'Company not found' }, { status: 404 });
     }
 
     // Find sector by name (within the company) - case insensitive
@@ -109,7 +110,7 @@ export async function GET(req: Request) {
     });
 
     if (!setor) {
-      return NextResponse.json({ error: 'Sector not found' }, { status: 404 });
+      return jsonResponse({ error: 'Sector not found' }, { status: 404 });
     }
 
     const records = await prisma.presenca.findMany({
@@ -134,36 +135,36 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json(records.map(r => ({
+    return jsonResponse(records.map(r => ({
       id: r.id,
       funcionario_id: r.funcionario_id,
       funcionario: r.funcionario.nome
     })));
   } catch (err) {
     console.error('Error in GET /api/attendance:', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return jsonResponse({ error: 'Server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions as any);
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+      return jsonResponse({ error: 'Missing ID' }, { status: 400 });
     }
 
     await prisma.presenca.delete({
       where: { id: Number(id) }
     });
 
-    return NextResponse.json({ ok: true });
+    return jsonResponse({ ok: true });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return jsonResponse({ error: 'Server error' }, { status: 500 });
   }
 }

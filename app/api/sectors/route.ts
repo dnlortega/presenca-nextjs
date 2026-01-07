@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
+import { jsonResponse } from '../../../lib/api-helpers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 
@@ -8,13 +9,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions as any);
-        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
         const url = new URL(req.url);
         const companyName = url.searchParams.get('company');
 
         if (!companyName) {
-            return NextResponse.json({ error: 'Company is required' }, { status: 400 });
+            return jsonResponse({ error: 'Company is required' }, { status: 400 });
         }
 
         const s: any = session;
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
         }
 
         if (!allowedCompanyNames.includes(companyName)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+            return jsonResponse({ error: 'Forbidden' }, { status: 403 });
         }
 
         // 2. Find the company by name
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
         });
 
         if (!company) {
-            return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+            return jsonResponse({ error: 'Company not found' }, { status: 404 });
         }
 
         // 3. Get all sectors for this company
@@ -55,9 +56,9 @@ export async function GET(req: Request) {
             orderBy: { nome: 'asc' }
         });
 
-        return NextResponse.json(sectors.map(s => s.nome));
+        return jsonResponse(sectors.map(s => s.nome));
     } catch (err) {
         console.error('Error in /api/sectors:', err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }

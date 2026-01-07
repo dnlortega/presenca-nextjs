@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 import prisma from '../../../lib/prisma';
+import { jsonResponse } from '../../../lib/api-helpers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
 
@@ -9,7 +10,7 @@ import { authOptions } from '../../../lib/auth';
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions as any);
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
     const url = new URL(req.url);
     const companyName = url.searchParams.get('company');
@@ -33,7 +34,7 @@ export async function GET(req: Request) {
 
     // 2. Validate requested company
     if (companyName && !allowedCompanyNames.includes(companyName)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return jsonResponse({ error: 'Forbidden' }, { status: 403 });
     }
 
     // 3. Build query - need to get IDs from names
@@ -46,7 +47,7 @@ export async function GET(req: Request) {
       });
 
       if (!company) {
-        return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+        return jsonResponse({ error: 'Company not found' }, { status: 404 });
       }
 
       where.empresa_id = company.id;
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
       });
 
       if (!sector) {
-        return NextResponse.json({ error: 'Sector not found' }, { status: 404 });
+        return jsonResponse({ error: 'Sector not found' }, { status: 404 });
       }
 
       where.setor_id = sector.id;
@@ -96,9 +97,9 @@ export async function GET(req: Request) {
       setor_id: f.setor_id
     }));
 
-    return NextResponse.json(formatted);
+    return jsonResponse(formatted);
   } catch (err) {
     console.error('Error in /api/employees:', err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return jsonResponse({ error: 'Server error' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
+import { jsonResponse } from '../../../../lib/api-helpers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../../lib/auth';
 
@@ -13,7 +14,7 @@ export async function PUT(
     try {
         const session = await getServerSession(authOptions as any);
         if (!session || (session as any).user?.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { id } = await params;
@@ -21,7 +22,7 @@ export async function PUT(
         const companyId = parseInt(id);
 
         if (!nome) {
-            return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
+            return jsonResponse({ error: 'Nome é obrigatório' }, { status: 400 });
         }
 
         const company = await prisma.empresas.update({
@@ -29,13 +30,13 @@ export async function PUT(
             data: { nome }
         });
 
-        return NextResponse.json(company);
+        return jsonResponse(company);
     } catch (err: any) {
         console.error(err);
         if (err.code === 'P2002') {
-            return NextResponse.json({ error: 'Empresa já existe' }, { status: 400 });
+            return jsonResponse({ error: 'Empresa já existe' }, { status: 400 });
         }
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }
 
@@ -46,7 +47,7 @@ export async function DELETE(
     try {
         const session = await getServerSession(authOptions as any);
         if (!session || (session as any).user?.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { id } = await params;
@@ -56,9 +57,9 @@ export async function DELETE(
             where: { id: companyId }
         });
 
-        return NextResponse.json({ success: true });
+        return jsonResponse({ success: true });
     } catch (err) {
         console.error(err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }

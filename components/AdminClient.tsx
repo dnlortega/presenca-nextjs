@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./ModeToggle";
 import AttendanceChart from "./AttendanceChart";
+import { fetchNoCache } from "../lib/fetch-helpers";
 
 type Tab = 'overview' | 'companies' | 'sectors' | 'employees' | 'users' | 'reports' | 'settings';
 
@@ -123,6 +124,7 @@ export default function AdminClient() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [isLoadingSectors, setIsLoadingSectors] = useState(false);
+  const [isSeedingEmployees, setIsSeedingEmployees] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'overview') loadDashboard();
@@ -137,7 +139,7 @@ export default function AdminClient() {
     setIsLoadingDashboard(true);
     setDashboardError(null);
     try {
-      const res = await fetch('/api/admin/dashboard');
+      const res = await fetchNoCache('/api/admin/dashboard');
       const data = await res.json();
       if (res.ok) {
         setDashboardData(data);
@@ -155,7 +157,7 @@ export default function AdminClient() {
 
   const loadEmployees = async () => {
     try {
-      const res = await fetch('/api/admin/employees');
+      const res = await fetchNoCache('/api/admin/employees');
       const data = await res.json();
       if (Array.isArray(data)) setEmployees(data);
     } catch (e) { console.error(e); }
@@ -164,7 +166,7 @@ export default function AdminClient() {
   const loadUsers = async () => {
     setLoadingUsers(true);
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetchNoCache('/api/admin/users');
       const data = await res.json();
       if (Array.isArray(data)) setUsers(data);
     } catch (e) { console.error(e); }
@@ -173,7 +175,7 @@ export default function AdminClient() {
 
   const loadCompanies = async () => {
     try {
-      const res = await fetch('/api/admin/companies');
+      const res = await fetchNoCache('/api/admin/companies');
       const data = await res.json();
       if (Array.isArray(data)) setCompanies(data);
     } catch (e) { console.error(e); }
@@ -182,7 +184,7 @@ export default function AdminClient() {
   const loadReports = async () => {
     setIsLoadingReports(true);
     try {
-      const res = await fetch('/api/admin/reports');
+      const res = await fetchNoCache('/api/admin/reports');
       const data = await res.json();
       if (res.ok) setReports(data);
     } catch (e) { console.error(e); }
@@ -192,16 +194,40 @@ export default function AdminClient() {
   const loadSectors = async () => {
     setIsLoadingSectors(true);
     try {
-      const res = await fetch('/api/admin/sectors');
+      const res = await fetchNoCache('/api/admin/sectors');
       const data = await res.json();
       if (Array.isArray(data)) setSectors(data);
     } catch (e) { console.error(e); }
     setIsLoadingSectors(false);
   };
 
+  const seedEmployees = async () => {
+    if (!confirm('Deseja criar 20 funcionários em cada setor cadastrado? Esta ação pode demorar alguns segundos.')) {
+      return;
+    }
+    
+    setIsSeedingEmployees(true);
+    try {
+      const res = await fetchNoCache('/api/admin/seed-employees', { method: 'POST' });
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert(`✅ Sucesso!\n\nTotal criado: ${data.totalCriados} funcionários\nSetores processados: ${data.totalSetores}\n\nRecarregando lista...`);
+        loadEmployees();
+      } else {
+        alert(`❌ Erro: ${data.error || 'Erro ao criar funcionários'}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('❌ Erro ao conectar com o servidor');
+    } finally {
+      setIsSeedingEmployees(false);
+    }
+  };
+
   const updateUserRole = async (userId: number, newRole: string) => {
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await fetchNoCache(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole }),
@@ -215,7 +241,7 @@ export default function AdminClient() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+      const res = await fetchNoCache(`/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresas: userCompForm }),
@@ -247,7 +273,7 @@ export default function AdminClient() {
       const url = editingEmp ? `/api/admin/employees/${editingEmp.id}` : '/api/admin/employees';
       const method = editingEmp ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await fetchNoCache(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -271,7 +297,7 @@ export default function AdminClient() {
   const handleDeleteEmployee = async (id: number) => {
     if (!confirm('Tem certeza que deseja excluir?')) return;
     try {
-      const res = await fetch(`/api/admin/employees/${id}`, { method: 'DELETE' });
+      const res = await fetchNoCache(`/api/admin/employees/${id}`, { method: 'DELETE' });
       if (res.ok) loadEmployees();
       else alert('Erro ao excluir');
     } catch (err) { console.error(err); }
@@ -283,7 +309,7 @@ export default function AdminClient() {
       const url = editingComp ? `/api/admin/companies/${editingComp.id}` : '/api/admin/companies';
       const method = editingComp ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await fetchNoCache(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(compForm),
@@ -304,7 +330,7 @@ export default function AdminClient() {
   const handleDeleteCompany = async (id: number) => {
     if (!confirm('Tem certeza que deseja excluir?')) return;
     try {
-      const res = await fetch(`/api/admin/companies/${id}`, { method: 'DELETE' });
+      const res = await fetchNoCache(`/api/admin/companies/${id}`, { method: 'DELETE' });
       if (res.ok) loadCompanies();
       else alert('Erro ao excluir');
     } catch (err) { console.error(err); }
@@ -368,7 +394,7 @@ export default function AdminClient() {
       const url = editingSector ? `/api/admin/sectors/${editingSector.id}` : '/api/admin/sectors';
       const method = editingSector ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await fetchNoCache(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -395,7 +421,7 @@ export default function AdminClient() {
   const handleDeleteSector = async (id: number) => {
     if (!confirm('Tem certeza que deseja excluir este setor?')) return;
     try {
-      const res = await fetch(`/api/admin/sectors/${id}`, { method: 'DELETE' });
+      const res = await fetchNoCache(`/api/admin/sectors/${id}`, { method: 'DELETE' });
       if (res.ok) loadSectors();
       else alert('Erro ao excluir');
     } catch (err) { console.error(err); }
@@ -930,6 +956,23 @@ export default function AdminClient() {
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
+                  <Button 
+                    size="sm" 
+                    onClick={seedEmployees} 
+                    className="font-bold rounded-lg px-4 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={isSeedingEmployees || sectors.length === 0}
+                  >
+                    {isSeedingEmployees ? (
+                      <>
+                        <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-1" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <LucideUsers className="w-4 h-4 mr-1" /> Popular (15 por setor)
+                      </>
+                    )}
+                  </Button>
                   <Button size="sm" onClick={() => openEmpModal()} className="font-bold rounded-lg px-4 w-full sm:w-auto" disabled={sectors.length === 0}>
                     <LucidePlus className="w-4 h-4 mr-1" /> Novo
                   </Button>
@@ -1198,7 +1241,7 @@ export default function AdminClient() {
                                 className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={async () => {
                                   if (!confirm('Deseja excluir este registro?')) return;
-                                  const res = await fetch(`/api/attendance?id=${r.id}`, { method: 'DELETE' });
+                                  const res = await fetchNoCache(`/api/attendance?id=${r.id}`, { method: 'DELETE' });
                                   if (res.ok) loadReports();
                                 }}
                               >
@@ -1246,7 +1289,7 @@ export default function AdminClient() {
                               className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
                               onClick={async () => {
                                 if (!confirm('Deseja excluir este registro?')) return;
-                                const res = await fetch(`/api/attendance?id=${r.id}`, { method: 'DELETE' });
+                                const res = await fetchNoCache(`/api/attendance?id=${r.id}`, { method: 'DELETE' });
                                 if (res.ok) loadReports();
                               }}
                             >

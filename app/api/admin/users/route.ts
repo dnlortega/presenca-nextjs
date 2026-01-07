@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
+import { jsonResponse } from '../../../../lib/api-helpers';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 
@@ -10,7 +11,7 @@ export async function GET() {
     try {
         const session = await getServerSession(authOptions as any);
         if (!session || (session as any).user?.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const users = await prisma.usuarios.findMany({
@@ -39,9 +40,9 @@ export async function GET() {
             empresas: u.usuario_empresas.map(ue => ue.empresa.nome)
         }));
 
-        return NextResponse.json(formattedUsers);
+        return jsonResponse(formattedUsers);
     } catch (err) {
         console.error('Erro ao buscar usuários:', err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }

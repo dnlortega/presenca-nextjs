@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
+import { fetchNoCache } from '../lib/fetch-helpers';
 import {
   LucideBuilding,
   LucideLayers,
@@ -40,7 +41,7 @@ export default function EducatorClient() {
 
   const loadMyCompanies = async () => {
     try {
-      const res = await fetch('/api/my-companies');
+      const res = await fetchNoCache('/api/my-companies');
       const data = await res.json();
       if (res.ok) setCompanies(data.companies);
     } catch (e) { console.error(e); }
@@ -49,7 +50,7 @@ export default function EducatorClient() {
   const loadSectors = async (company: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/sectors?company=${encodeURIComponent(company)}`);
+      const res = await fetchNoCache(`/api/sectors?company=${encodeURIComponent(company)}`);
       const data = await res.json();
       if (res.ok) setSectors(data);
       setStep(2);
@@ -61,11 +62,11 @@ export default function EducatorClient() {
     setLoading(true);
     try {
       // Load all employees of this sector
-      const resEmp = await fetch(`/api/employees?company=${encodeURIComponent(selectedCompany)}&sector=${encodeURIComponent(sector)}`);
+      const resEmp = await fetchNoCache(`/api/employees?company=${encodeURIComponent(selectedCompany)}&sector=${encodeURIComponent(sector)}`);
       const dataEmp = await resEmp.json();
 
       // Load who is already present today
-      const resPres = await fetch(`/api/attendance?empresa=${encodeURIComponent(selectedCompany)}&setor=${encodeURIComponent(sector)}`);
+      const resPres = await fetchNoCache(`/api/attendance?empresa=${encodeURIComponent(selectedCompany)}&setor=${encodeURIComponent(sector)}`);
       const dataPres = await resPres.json();
 
       if (resEmp.ok) setEmployees(dataEmp);
@@ -80,7 +81,7 @@ export default function EducatorClient() {
     if (!confirm('Deseja remover esta presença?')) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/attendance?id=${attendanceId}`, { method: 'DELETE' });
+      const res = await fetchNoCache(`/api/attendance?id=${attendanceId}`, { method: 'DELETE' });
       if (res.ok) {
         setPresentToday(prev => prev.filter(p => p.id !== attendanceId));
         setFeedback({ type: 'info', msg: 'Presença removida.' });
@@ -99,7 +100,7 @@ export default function EducatorClient() {
   const submitAttendance = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/attendance', {
+      const res = await fetchNoCache('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

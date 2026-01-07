@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
+import { jsonResponse } from '../../../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,7 +11,7 @@ export async function GET() {
     try {
         const session = await getServerSession(authOptions as any);
         if (!session || (session as any).user?.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const employees = await prisma.funcionarios.findMany({
@@ -32,10 +33,10 @@ export async function GET() {
             setor: e.setor?.nome || null
         }));
 
-        return NextResponse.json(formatted);
+        return jsonResponse(formatted);
     } catch (err) {
         console.error(err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }
 
@@ -43,13 +44,13 @@ export async function POST(req: Request) {
     try {
         const session = await getServerSession(authOptions as any);
         if (!session || (session as any).user?.role !== 'admin') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { nome, empresa_id, setor_id, valor } = await req.json();
 
         if (!nome || !empresa_id || !setor_id) {
-            return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 });
+            return jsonResponse({ error: 'Todos os campos são obrigatórios' }, { status: 400 });
         }
 
         await prisma.funcionarios.create({
@@ -61,9 +62,9 @@ export async function POST(req: Request) {
             }
         });
 
-        return NextResponse.json({ success: true });
+        return jsonResponse({ success: true });
     } catch (err) {
         console.error(err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }

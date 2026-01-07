@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
+import { jsonResponse, noCacheHeaders } from '../../../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -27,7 +28,7 @@ function getDayRange(date: Date) {
 export async function GET() {
     try {
         const session = await getServerSession(authOptions as any);
-        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
         const todayRef = getSaoPauloDate();
         const { start: startToday, end: endToday } = getDayRange(todayRef);
@@ -84,7 +85,7 @@ export async function GET() {
              ORDER BY p.id DESC LIMIT 5`
         );
 
-        return NextResponse.json({
+        return jsonResponse({
             totalToday,
             sectorsActive,
             sectorStats,
@@ -93,7 +94,7 @@ export async function GET() {
         });
     } catch (err) {
         console.error('Dashboard API Error:', err);
-        return NextResponse.json({ 
+        return jsonResponse({ 
             error: 'Erro ao carregar dados do dashboard',
             details: err instanceof Error ? err.message : 'Erro desconhecido'
         }, { status: 500 });
