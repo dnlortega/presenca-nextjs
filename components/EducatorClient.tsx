@@ -19,7 +19,8 @@ import {
   LucidePlus,
   LucideX,
   LucideCheckSquare,
-  LucideEdit2
+  LucideEdit2,
+  LucideAlertCircle
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
