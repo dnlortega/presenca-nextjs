@@ -100,6 +100,8 @@ export default function AdminClient() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [reports, setReports] = useState<ReportRecord[]>([]);
@@ -132,11 +134,23 @@ export default function AdminClient() {
   }, [activeTab]);
 
   const loadDashboard = async () => {
+    setIsLoadingDashboard(true);
+    setDashboardError(null);
     try {
       const res = await fetch('/api/admin/dashboard');
       const data = await res.json();
-      if (res.ok) setDashboardData(data);
-    } catch (e) { console.error(e); }
+      if (res.ok) {
+        setDashboardData(data);
+      } else {
+        setDashboardError(data.error || 'Erro ao carregar dashboard');
+        console.error('Dashboard error:', data);
+      }
+    } catch (e) { 
+      setDashboardError('Erro ao conectar com o servidor');
+      console.error('Dashboard fetch error:', e); 
+    } finally {
+      setIsLoadingDashboard(false);
+    }
   };
 
   const loadEmployees = async () => {
@@ -411,6 +425,24 @@ export default function AdminClient() {
       case 'overview':
         return (
           <div className="space-y-6 animate-scale-in">
+            {dashboardError && (
+              <Card className="border-destructive/50 bg-destructive/10">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 text-destructive text-sm">
+                    <LucideAlertCircle className="w-4 h-4" />
+                    <span>{dashboardError}</span>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={loadDashboard}
+                      className="ml-auto text-xs"
+                    >
+                      Tentar novamente
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -418,10 +450,14 @@ export default function AdminClient() {
                   <LucideUsers className="w-4 h-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-black">{dashboardData?.totalToday ?? (
-                    <div className="h-8 w-16 bg-muted/20 animate-shimmer rounded" />
-                  )}</div>
-                  <p className="text-[10px] text-muted-foreground mt-1">+12% em relação a ontem</p>
+                  <div className="text-2xl font-black">
+                    {isLoadingDashboard ? (
+                      <div className="h-8 w-16 bg-muted/20 animate-shimmer rounded" />
+                    ) : (
+                      dashboardData?.totalToday ?? 0
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Presenças registradas hoje</p>
                 </CardContent>
               </Card>
 
@@ -431,10 +467,14 @@ export default function AdminClient() {
                   <LucideBarChart className="w-4 h-4 text-indigo-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-black">{dashboardData?.sectorsActive ?? (
-                    <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" />
-                  )}</div>
-                  <p className="text-[10px] text-muted-foreground mt-1">4 setores pendentes</p>
+                  <div className="text-2xl font-black">
+                    {isLoadingDashboard ? (
+                      <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" />
+                    ) : (
+                      dashboardData?.sectorsActive ?? 0
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Com presença registrada hoje</p>
                 </CardContent>
               </Card>
 
@@ -546,43 +586,45 @@ export default function AdminClient() {
         return (
           <div className="page-transition space-y-4">
             <Card className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>Gestão de Empresas</CardTitle>
-                  <CardDescription>{companies.length} empresas integradas ao ecossistema</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Gestão de Empresas</CardTitle>
+                  <CardDescription className="text-xs">{companies.length} empresas integradas ao ecossistema</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-auto">
                     <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Buscar Empresa..."
-                      className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-primary w-48 transition-all font-bold"
+                      className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-2 text-xs focus:ring-1 focus:ring-primary w-full sm:w-48 transition-all font-bold"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" onClick={() => openCompModal()} className="font-black uppercase tracking-widest text-[10px] rounded-xl px-4 shadow-lg shadow-primary/20">
+                  <Button size="sm" onClick={() => openCompModal()} className="font-black uppercase tracking-widest text-[10px] rounded-xl px-4 shadow-lg shadow-primary/20 w-full sm:w-auto">
                     <LucidePlus className="w-4 h-4 mr-1" /> Nova Empresa
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-muted/50">
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Setores Vinculados</TableHead>
-                      <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCompanies.map((comp) => {
-                      const companySectors = sectors.filter(s => s.empresa_id === comp.id);
-                      return (
-                        <TableRow key={comp.id} className="border-muted/30 group hover:bg-muted/10 transition-colors">
-                          <TableCell className="py-4 font-black text-xs">{comp.nome}</TableCell>
-                          <TableCell className="py-4">
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-muted/50">
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</TableHead>
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Setores Vinculados</TableHead>
+                        <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCompanies.map((comp) => {
+                        const companySectors = sectors.filter(s => s.empresa_id === comp.id);
+                        return (
+                          <TableRow key={comp.id} className="border-muted/30 group hover:bg-muted/10 transition-colors">
+                            <TableCell className="py-4 font-black text-xs">{comp.nome}</TableCell>
+                            <TableCell className="py-4">
                             <div className="space-y-2">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
@@ -671,6 +713,92 @@ export default function AdminClient() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                  {filteredCompanies.length === 0 ? (
+                    <div className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-2 opacity-30">
+                        <LucideBuilding className="w-10 h-10" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Nenhuma empresa encontrada</span>
+                      </div>
+                    </div>
+                  ) : (
+                    filteredCompanies.map((comp) => {
+                      const companySectors = sectors.filter(s => s.empresa_id === comp.id);
+                      return (
+                        <Card key={comp.id} className="border border-border/50">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <CardTitle className="text-sm font-black truncate">{comp.nome}</CardTitle>
+                                <CardDescription className="text-xs mt-1">
+                                  {companySectors.length} {companySectors.length === 1 ? 'Setor' : 'Setores'}
+                                </CardDescription>
+                              </div>
+                              <div className="flex gap-1 ml-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openCompModal(comp)}>
+                                  <LucideEdit className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteCompany(comp.id)}>
+                                  <LucideTrash className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black text-muted-foreground uppercase">Setores</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[9px] font-black uppercase tracking-widest hover:bg-primary/20 hover:text-primary transition-all rounded-lg px-2"
+                                onClick={() => {
+                                  setEditingSector(null);
+                                  setSectorForm({ nome: '', empresa_id: String(comp.id) });
+                                  setIsSectorModalOpen(true);
+                                }}
+                              >
+                                <LucidePlus className="w-3 h-3 mr-1" /> Novo
+                              </Button>
+                            </div>
+                            {companySectors.length > 0 ? (
+                              <div className="space-y-2">
+                                {companySectors.map((s) => (
+                                  <div key={s.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border/30">
+                                    <span className="text-xs font-bold">{s.nome}</span>
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => openSectorModal(s)}
+                                        className="h-6 w-6 rounded-md hover:bg-primary/20 hover:text-primary transition-all flex items-center justify-center"
+                                        title="Editar Setor"
+                                      >
+                                        <LucideEdit className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteSector(s.id)}
+                                        className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
+                                        title="Excluir Setor"
+                                      >
+                                        <LucideTrash className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="py-4 text-center border border-dashed border-border/50 rounded-lg bg-muted/10">
+                                <LucideLayers className="w-5 h-5 mx-auto mb-1 opacity-20" />
+                                <span className="text-[9px] text-muted-foreground italic font-medium block">Nenhum setor cadastrado</span>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -679,23 +807,23 @@ export default function AdminClient() {
         return (
           <div className="page-transition space-y-4">
             <Card className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>Setores</CardTitle>
-                  <CardDescription>{sectors.length} setores configurados</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Setores</CardTitle>
+                  <CardDescription className="text-xs">{sectors.length} setores configurados</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-auto">
                     <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Buscar..."
-                      className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-primary w-48 transition-all"
+                      className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-2 text-xs focus:ring-1 focus:ring-primary w-full sm:w-48 transition-all"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" onClick={() => openSectorModal()} className="font-bold rounded-lg px-4" disabled={companies.length === 0}>
+                  <Button size="sm" onClick={() => openSectorModal()} className="font-bold rounded-lg px-4 w-full sm:w-auto" disabled={companies.length === 0}>
                     <LucidePlus className="w-4 h-4 mr-1" /> Novo Setor
                   </Button>
                 </div>
@@ -707,31 +835,60 @@ export default function AdminClient() {
                     Cadastre uma empresa primeiro
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent border-muted/50">
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome do Setor</TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</TableHead>
-                        <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-muted/50">
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome do Setor</TableHead>
+                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</TableHead>
+                            <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredSectors.map((sec) => (
+                            <TableRow key={sec.id} className="border-muted/30 group">
+                              <TableCell className="py-3 font-bold">{sec.nome}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{sec.empresa?.nome}</TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openSectorModal(sec)}>
+                                  <LucideEdit className="w-3 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteSector(sec.id)}>
+                                  <LucideTrash className="w-3 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3">
                       {filteredSectors.map((sec) => (
-                        <TableRow key={sec.id} className="border-muted/30 group">
-                          <TableCell className="py-3 font-bold">{sec.nome}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{sec.empresa?.nome}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openSectorModal(sec)}>
-                              <LucideEdit className="w-3 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteSector(sec.id)}>
-                              <LucideTrash className="w-3 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                        <Card key={sec.id} className="border border-border/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <CardTitle className="text-sm font-bold mb-1">{sec.nome}</CardTitle>
+                                <CardDescription className="text-xs">{sec.empresa?.nome}</CardDescription>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openSectorModal(sec)}>
+                                  <LucideEdit className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteSector(sec.id)}>
+                                  <LucideTrash className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -757,61 +914,97 @@ export default function AdminClient() {
         return (
           <div className="page-transition space-y-4">
             <Card className="border-none shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>Funcionários</CardTitle>
-                  <CardDescription>{employees.length} registros ativos</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Funcionários</CardTitle>
+                  <CardDescription className="text-xs">{employees.length} registros ativos</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-auto">
                     <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Buscar..."
-                      className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-primary w-48 transition-all"
+                      className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-2 text-xs focus:ring-1 focus:ring-primary w-full sm:w-48 transition-all"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" onClick={() => openEmpModal()} className="font-bold rounded-lg px-4" disabled={sectors.length === 0}>
+                  <Button size="sm" onClick={() => openEmpModal()} className="font-bold rounded-lg px-4 w-full sm:w-auto" disabled={sectors.length === 0}>
                     <LucidePlus className="w-4 h-4 mr-1" /> Novo
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-muted/50">
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Setor</TableHead>
-                      <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEmployees.map((emp) => (
-                      <TableRow key={emp.id} className="border-muted/30 group">
-                        <TableCell className="py-3 font-bold">{emp.nome || '-'}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || '-')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
-                            {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || '-')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEmpModal(emp)}>
-                            <LucideEdit className="w-3 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteEmployee(emp.id)}>
-                            <LucideTrash className="w-3 h-4" />
-                          </Button>
-                        </TableCell>
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-muted/50">
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome</TableHead>
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</TableHead>
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Setor</TableHead>
+                        <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEmployees.map((emp) => (
+                        <TableRow key={emp.id} className="border-muted/30 group">
+                          <TableCell className="py-3 font-bold">{emp.nome || '-'}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || '-')}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
+                              {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || '-')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEmpModal(emp)}>
+                              <LucideEdit className="w-3 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteEmployee(emp.id)}>
+                              <LucideTrash className="w-3 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {filteredEmployees.map((emp) => (
+                    <Card key={emp.id} className="border border-border/50">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-sm font-bold mb-1">{emp.nome || '-'}</CardTitle>
+                              <div className="space-y-1">
+                                <CardDescription className="text-xs">
+                                  {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || '-')}
+                                </CardDescription>
+                                <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
+                                  {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || '-')}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEmpModal(emp)}>
+                                <LucideEdit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteEmployee(emp.id)}>
+                                <LucideTrash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -821,68 +1014,124 @@ export default function AdminClient() {
           <div className="page-transition space-y-4">
             <Card className="border-none shadow-sm">
               <CardHeader>
-                <CardTitle>Gestão de Acessos</CardTitle>
-                <CardDescription>Gerencie quem pode acessar o sistema e os cargos correspondentes.</CardDescription>
+                <CardTitle className="text-base sm:text-lg">Gestão de Acessos</CardTitle>
+                <CardDescription className="text-xs">Gerencie quem pode acessar o sistema e os cargos correspondentes.</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-muted/50">
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Identificação</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status / Cargo</TableHead>
-                      <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((u) => (
-                      <TableRow key={u.id} className="border-muted/30">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8 rounded-lg border border-border">
-                              <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">
+                {/* Desktop Table View */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-muted/50">
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Identificação</TableHead>
+                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Status / Cargo</TableHead>
+                        <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((u) => (
+                        <TableRow key={u.id} className="border-muted/30">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8 rounded-lg border border-border">
+                                <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">
+                                  {u.username.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-xs">{u.username}</span>
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <LucideMail className="w-3 h-3" /> {u.email || '-'}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {u.role === 'pendente' ? (
+                              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-orange-500/30 text-orange-500 bg-orange-500/5">
+                                <LucideClock className="w-3 h-3 mr-1" /> Pendente
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'border-primary/30 text-primary bg-primary/5' : 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5'
+                                }`}>
+                                <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right space-x-1">
+                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => updateUserRole(u.id, 'educador')}>
+                              EDUCADOR
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => updateUserRole(u.id, 'admin')}>
+                              ADMIN
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => openUserCompModal(u)}>
+                              EMPRESAS
+                            </Button>
+                            {u.role !== 'pendente' && (
+                              <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-0 h-7 rounded-md text-muted-foreground hover:text-destructive" onClick={() => updateUserRole(u.id, 'pendente')}>
+                                BLOQUEAR
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {users.map((u) => (
+                    <Card key={u.id} className="border border-border/50">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="h-10 w-10 rounded-lg border border-border shrink-0">
+                              <AvatarFallback className="text-xs font-black bg-primary/10 text-primary">
                                 {u.username.substring(0, 2).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="flex flex-col">
-                              <span className="font-bold text-xs">{u.username}</span>
-                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-sm font-bold mb-1">{u.username}</CardTitle>
+                              <CardDescription className="text-xs flex items-center gap-1">
                                 <LucideMail className="w-3 h-3" /> {u.email || '-'}
-                              </span>
+                              </CardDescription>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {u.role === 'pendente' ? (
-                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-orange-500/30 text-orange-500 bg-orange-500/5">
-                              <LucideClock className="w-3 h-3 mr-1" /> Pendente
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'border-primary/30 text-primary bg-primary/5' : 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5'
-                              }`}>
-                              <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right space-x-1">
-                          <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => updateUserRole(u.id, 'educador')}>
-                            EDUCADOR
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => updateUserRole(u.id, 'admin')}>
-                            ADMIN
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => openUserCompModal(u)}>
-                            EMPRESAS
-                          </Button>
-                          {u.role !== 'pendente' && (
-                            <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-0 h-7 rounded-md text-muted-foreground hover:text-destructive" onClick={() => updateUserRole(u.id, 'pendente')}>
-                              BLOQUEAR
+                          <div className="flex items-center gap-2">
+                            {u.role === 'pendente' ? (
+                              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-orange-500/30 text-orange-500 bg-orange-500/5">
+                                <LucideClock className="w-3 h-3 mr-1" /> Pendente
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'border-primary/30 text-primary bg-primary/5' : 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5'
+                                }`}>
+                                <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 flex-1 min-w-[100px]" onClick={() => updateUserRole(u.id, 'educador')}>
+                              EDUCADOR
                             </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-primary/20 text-primary hover:bg-primary/5 flex-1 min-w-[100px]" onClick={() => updateUserRole(u.id, 'admin')}>
+                              ADMIN
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-primary/20 text-primary hover:bg-primary/5 flex-1 min-w-[100px]" onClick={() => openUserCompModal(u)}>
+                              EMPRESAS
+                            </Button>
+                            {u.role !== 'pendente' && (
+                              <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md text-muted-foreground hover:text-destructive w-full" onClick={() => updateUserRole(u.id, 'pendente')}>
+                                BLOQUEAR
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -902,7 +1151,8 @@ export default function AdminClient() {
 
             <Card className="border-none shadow-sm overflow-hidden bg-card/40 backdrop-blur-sm">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-muted/50 hover:bg-transparent">
@@ -966,6 +1216,55 @@ export default function AdminClient() {
                       )}
                     </TableBody>
                   </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden p-4 space-y-3">
+                  {isLoadingReports ? (
+                    [1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className="h-24 bg-muted/20 animate-shimmer rounded-lg" />
+                    ))
+                  ) : reports.length > 0 ? (
+                    reports.map((r) => (
+                      <Card key={r.id} className="border border-border/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs shrink-0">
+                                {r.funcionario.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <CardTitle className="text-sm font-bold mb-1">{r.funcionario}</CardTitle>
+                                <CardDescription className="text-xs">
+                                  {new Date(r.data_hora).toLocaleDateString('pt-BR')}
+                                </CardDescription>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={async () => {
+                                if (!confirm('Deseja excluir este registro?')) return;
+                                const res = await fetch(`/api/attendance?id=${r.id}`, { method: 'DELETE' });
+                                if (res.ok) loadReports();
+                              }}
+                            >
+                              <LucideTrash className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="pt-3 border-t border-border/50 space-y-1">
+                            <div className="text-[10px] font-black uppercase tracking-tight">{r.empresa}</div>
+                            <div className="text-[10px] text-muted-foreground uppercase font-medium">{r.setor}</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="py-20 text-center">
+                      <p className="text-xs font-black text-muted-foreground uppercase tracking-widest opacity-50">Nenhum registro encontrado</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1132,19 +1431,19 @@ export default function AdminClient() {
       {/* Main Content (Inset) */}
       <main className="flex-1 min-w-0 bg-background rounded-2xl border border-border/50 shadow-sm overflow-hidden flex flex-col relative transition-all duration-500">
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="max-w-6xl mx-auto p-6 lg:p-10">
-            <header className="mb-8 flex justify-between items-end animate-slide-up">
+          <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-10">
+            <header className="mb-6 lg:mb-8 flex flex-col lg:flex-row lg:justify-between lg:items-end gap-4 animate-slide-up">
               <div className="flex items-center gap-3">
                 {/* Mobile Menu Button */}
                 <button
                   onClick={() => setIsMobileMenuOpen(true)}
-                  className="lg:hidden w-10 h-10 rounded-xl bg-muted/50 hover:bg-muted flex items-center justify-center text-foreground transition-all"
+                  className="lg:hidden w-10 h-10 rounded-xl bg-muted/50 hover:bg-muted flex items-center justify-center text-foreground transition-all shrink-0"
                   aria-label="Abrir menu"
                 >
                   <LucideMenu className="w-5 h-5" />
                 </button>
-                <div>
-                  <h1 className="flex items-center gap-2 uppercase tracking-tighter text-xl lg:text-2xl font-black">
+                <div className="min-w-0">
+                  <h1 className="flex items-center gap-2 uppercase tracking-tighter text-lg sm:text-xl lg:text-2xl font-black break-words">
                     {activeTab === 'overview' && 'Dashboard Central'}
                     {activeTab === 'companies' && 'Gestão de Empresas'}
                     {activeTab === 'employees' && 'Base de Colaboradores'}
@@ -1152,7 +1451,7 @@ export default function AdminClient() {
                     {activeTab === 'reports' && 'Inteligência de Dados'}
                     {activeTab === 'settings' && 'Ajustes do Sistema'}
                   </h1>
-                  <p className="text-muted-foreground text-xs font-medium mt-1">Gerenciamento inteligente de presença e frequência.</p>
+                  <p className="text-muted-foreground text-xs font-medium mt-1 hidden sm:block">Gerenciamento inteligente de presença e frequência.</p>
                 </div>
               </div>
             </header>
@@ -1165,8 +1464,8 @@ export default function AdminClient() {
       {/* Employee Modal (Briefly styled for now) */}
       {/* Employee Modal */}
       {isEmpModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <LucideUser className="w-5 h-5 text-primary" />
@@ -1236,8 +1535,8 @@ export default function AdminClient() {
 
       {/* Sector Modal */}
       {isSectorModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <LucideLayers className="w-5 h-5 text-primary" />
@@ -1284,8 +1583,8 @@ export default function AdminClient() {
 
       {/* Company Modal */}
       {isCompModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <LucideBuilding className="w-5 h-5 text-primary" />
@@ -1316,8 +1615,8 @@ export default function AdminClient() {
 
       {/* User Companies Modal */}
       {isUserCompModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <LucideShieldCheck className="w-5 h-5 text-primary" />

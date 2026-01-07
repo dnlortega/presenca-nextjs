@@ -41,7 +41,14 @@ export async function GET() {
 
         // 2. Active Sectors Today with counts
         const sectorStats: any[] = await prisma.$queryRawUnsafe(
-            'SELECT f."setor", f."empresa", COUNT(*)::int as count FROM "presenca" p JOIN "funcionarios" f ON p."funcionario_id" = f.id WHERE p."data_hora" >= $1 AND p."data_hora" < $2 GROUP BY f."setor", f."empresa" ORDER BY count DESC',
+            `SELECT s.nome as setor, e.nome as empresa, COUNT(*)::int as count 
+             FROM "presenca" p 
+             JOIN "funcionarios" f ON p."funcionario_id" = f.id 
+             JOIN "setores" s ON f."setor_id" = s.id 
+             JOIN "empresas" e ON f."empresa_id" = e.id 
+             WHERE p."data_hora" >= $1 AND p."data_hora" < $2 
+             GROUP BY s.nome, e.nome 
+             ORDER BY count DESC`,
             startToday, endToday
         );
         const sectorsActive = sectorStats.length;
@@ -69,7 +76,12 @@ export async function GET() {
 
         // 4. Recent Activity (Last 5 presence records)
         const recentActivities = await prisma.$queryRawUnsafe<any[]>(
-            'SELECT p.id, f.nome as funcionario, f.setor, f.empresa, p.data_hora FROM "presenca" p JOIN "funcionarios" f ON p."funcionario_id" = f.id ORDER BY p.id DESC LIMIT 5'
+            `SELECT p.id, f.nome as funcionario, s.nome as setor, e.nome as empresa, p.data_hora 
+             FROM "presenca" p 
+             JOIN "funcionarios" f ON p."funcionario_id" = f.id 
+             JOIN "setores" s ON f."setor_id" = s.id 
+             JOIN "empresas" e ON f."empresa_id" = e.id 
+             ORDER BY p.id DESC LIMIT 5`
         );
 
         return NextResponse.json({
@@ -80,7 +92,10 @@ export async function GET() {
             recentActivities
         });
     } catch (err) {
-        console.error(err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        console.error('Dashboard API Error:', err);
+        return NextResponse.json({ 
+            error: 'Erro ao carregar dados do dashboard',
+            details: err instanceof Error ? err.message : 'Erro desconhecido'
+        }, { status: 500 });
     }
 }
