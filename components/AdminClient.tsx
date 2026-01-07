@@ -22,7 +22,8 @@ import {
   LucideUser,
   LucideLayers,
   LucideAlertCircle,
-  LucideX
+  LucideX,
+  LucideMenu
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 
@@ -97,6 +98,7 @@ export default function AdminClient() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -983,23 +985,45 @@ export default function AdminClient() {
 
   return (
     <div className="min-h-screen bg-muted/30 lg:flex p-2 gap-2 overflow-hidden">
-      {/* Sidebar - Shadcn Inset Style */}
-      <aside className={`shrink-0 bg-background/60 backdrop-blur-xl hidden lg:flex flex-col rounded-2xl border border-border/50 shadow-sm overflow-hidden relative transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'w-[80px] p-4' : 'w-64 p-6'}`}>
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-        {/* Toggle Button */}
+      {/* Sidebar - Shadcn Inset Style */}
+      <aside className={`shrink-0 bg-background/60 backdrop-blur-xl flex flex-col rounded-2xl border border-border/50 shadow-sm overflow-hidden relative transition-all duration-300 ease-in-out ${
+        isSidebarCollapsed && !isMobileMenuOpen ? 'w-[80px] p-4' : 'w-64 p-6'
+      } ${
+        isMobileMenuOpen 
+          ? 'fixed left-2 top-2 bottom-2 z-50 lg:relative lg:left-0 lg:top-0 lg:bottom-0' 
+          : 'hidden lg:flex'
+      }`}>
+
+        {/* Close Button Mobile */}
+        <button
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="lg:hidden absolute top-4 right-4 w-8 h-8 rounded-lg bg-muted/50 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all z-50"
+        >
+          <LucideX className="w-4 h-4" />
+        </button>
+
+        {/* Toggle Button (Desktop only) */}
         <button
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className="absolute -right-0 top-12 bg-primary text-primary-foreground w-5 h-10 rounded-l-md flex items-center justify-center shadow-lg hover:w-6 transition-all z-50"
+          className="hidden lg:flex absolute -right-0 top-12 bg-primary text-primary-foreground w-5 h-10 rounded-l-md items-center justify-center shadow-lg hover:w-6 transition-all z-50"
         >
           {isSidebarCollapsed ? <LucidePanelLeftOpen className="w-3 h-3" /> : <LucidePanelLeftClose className="w-3 h-3" />}
         </button>
 
         {/* Logo Section */}
-        <div className={`mb-8 flex items-center gap-2.5 transition-all ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+        <div className={`mb-8 flex items-center gap-2.5 transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}>
           <div className="w-8 h-8 bg-primary rounded-lg shrink-0 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 animate-float">
             <LucideShieldCheck className="w-5 h-5" />
           </div>
-          {!isSidebarCollapsed && (
+          {(!isSidebarCollapsed || isMobileMenuOpen) && (
             <span className="font-black text-lg tracking-tighter uppercase whitespace-nowrap animate-in fade-in slide-in-from-left-2">
               Presença<span className="text-primary italic">.Pro</span>
             </span>
@@ -1007,7 +1031,7 @@ export default function AdminClient() {
         </div>
 
         {/* User Profile Section */}
-        <div className={`mb-6 p-2 rounded-xl bg-primary/5 border border-primary/10 flex items-center gap-3 overflow-hidden transition-all ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+        <div className={`mb-6 p-2 rounded-xl bg-primary/5 border border-primary/10 flex items-center gap-3 overflow-hidden transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}>
           <Avatar className="h-8 w-8 rounded-lg shrink-0 border border-primary/20">
             {session?.user?.image ? (
               <AvatarImage src={session.user.image} alt={session.user.name || ''} />
@@ -1017,7 +1041,7 @@ export default function AdminClient() {
               </AvatarFallback>
             )}
           </Avatar>
-          {!isSidebarCollapsed && (
+          {(!isSidebarCollapsed || isMobileMenuOpen) && (
             <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2">
               <span className="text-[10px] font-black truncate leading-tight uppercase">{session?.user?.name || 'Administrador'}</span>
               <span className="text-[9px] text-muted-foreground truncate leading-tight">{session?.user?.email || 'admin@presenca.pro'}</span>
@@ -1028,8 +1052,8 @@ export default function AdminClient() {
         {/* Primary Navigation */}
         <div className="flex-1 space-y-6 overflow-y-auto pr-1 custom-scrollbar overflow-x-hidden">
           <div className="space-y-1">
-            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed ? 'text-center ml-0' : ''}`}>
-              {isSidebarCollapsed ? '•' : 'Principal'}
+            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'text-center ml-0' : ''}`}>
+              {isSidebarCollapsed && !isMobileMenuOpen ? '•' : 'Principal'}
             </h3>
             {[
               { id: 'overview', label: 'Dashboard', icon: LucideLayoutDashboard },
@@ -1039,23 +1063,26 @@ export default function AdminClient() {
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as Tab)}
+                onClick={() => {
+                  setActiveTab(item.id as Tab);
+                  setIsMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === item.id
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  } ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                title={isSidebarCollapsed ? item.label : ''}
+                  } ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
+                title={isSidebarCollapsed && !isMobileMenuOpen ? item.label : ''}
               >
                 <item.icon className="w-4 h-4 shrink-0" />
-                {!isSidebarCollapsed && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
+                {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
               </button>
             ))}
           </div>
 
           {/* Secondary Navigation */}
           <div className="space-y-1">
-            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed ? 'text-center ml-0' : ''}`}>
-              {isSidebarCollapsed ? '•' : 'Sistema'}
+            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'text-center ml-0' : ''}`}>
+              {isSidebarCollapsed && !isMobileMenuOpen ? '•' : 'Sistema'}
             </h3>
             {[
               { id: 'reports', label: 'Relatórios', icon: LucideFileText },
@@ -1063,15 +1090,18 @@ export default function AdminClient() {
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as Tab)}
+                onClick={() => {
+                  setActiveTab(item.id as Tab);
+                  setIsMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === item.id
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
                   : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  } ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                title={isSidebarCollapsed ? item.label : ''}
+                  } ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
+                title={isSidebarCollapsed && !isMobileMenuOpen ? item.label : ''}
               >
                 <item.icon className="w-4 h-4 shrink-0" />
-                {!isSidebarCollapsed && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
+                {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
               </button>
             ))}
           </div>
@@ -1079,19 +1109,22 @@ export default function AdminClient() {
 
         {/* Bottom Section */}
         <div className="pt-6 mt-6 border-t border-border/50 space-y-4 shrink-0">
-          {!isSidebarCollapsed && (
+          {(!isSidebarCollapsed || isMobileMenuOpen) && (
             <div className="flex items-center justify-between px-2 animate-in fade-in zoom-in-95">
               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-[8px]">Dark Mode</span>
               <ModeToggle />
             </div>
           )}
           <button
-            onClick={() => signOut({ callbackUrl: '/login' })}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group ${isSidebarCollapsed ? 'justify-center' : ''}`}
-            title={isSidebarCollapsed ? 'Sair' : ''}
+            onClick={() => {
+              signOut({ callbackUrl: '/login' });
+              setIsMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
+            title={isSidebarCollapsed && !isMobileMenuOpen ? 'Sair' : ''}
           >
             <LucideLogOut className="w-4 h-4 shrink-0 group-hover:rotate-180 transition-transform duration-500" />
-            {!isSidebarCollapsed && <span className="animate-in fade-in slide-in-from-left-2">Sair do Sistema</span>}
+            {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="animate-in fade-in slide-in-from-left-2">Sair do Sistema</span>}
           </button>
         </div>
       </aside>
@@ -1101,16 +1134,26 @@ export default function AdminClient() {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="max-w-6xl mx-auto p-6 lg:p-10">
             <header className="mb-8 flex justify-between items-end animate-slide-up">
-              <div>
-                <h1 className="flex items-center gap-2 uppercase tracking-tighter text-2xl font-black">
-                  {activeTab === 'overview' && 'Dashboard Central'}
-                  {activeTab === 'companies' && 'Gestão de Empresas'}
-                  {activeTab === 'employees' && 'Base de Colaboradores'}
-                  {activeTab === 'users' && 'Controle de Acessos'}
-                  {activeTab === 'reports' && 'Inteligência de Dados'}
-                  {activeTab === 'settings' && 'Ajustes do Sistema'}
-                </h1>
-                <p className="text-muted-foreground text-xs font-medium mt-1">Gerenciamento inteligente de presença e frequência.</p>
+              <div className="flex items-center gap-3">
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="lg:hidden w-10 h-10 rounded-xl bg-muted/50 hover:bg-muted flex items-center justify-center text-foreground transition-all"
+                  aria-label="Abrir menu"
+                >
+                  <LucideMenu className="w-5 h-5" />
+                </button>
+                <div>
+                  <h1 className="flex items-center gap-2 uppercase tracking-tighter text-xl lg:text-2xl font-black">
+                    {activeTab === 'overview' && 'Dashboard Central'}
+                    {activeTab === 'companies' && 'Gestão de Empresas'}
+                    {activeTab === 'employees' && 'Base de Colaboradores'}
+                    {activeTab === 'users' && 'Controle de Acessos'}
+                    {activeTab === 'reports' && 'Inteligência de Dados'}
+                    {activeTab === 'settings' && 'Ajustes do Sistema'}
+                  </h1>
+                  <p className="text-muted-foreground text-xs font-medium mt-1">Gerenciamento inteligente de presença e frequência.</p>
+                </div>
               </div>
             </header>
 
