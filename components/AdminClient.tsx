@@ -1772,6 +1772,63 @@ export default function AdminClient() {
           </Card>
         </div>
       )}
+
+      {/* Access Management Modal */}
+      {isAccessModalOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <LucideShieldCheck className="w-5 h-5 text-emerald-500" />
+                Permissões de Educador
+              </CardTitle>
+              <CardDescription>
+                Configure o que <b>{selectedUser?.username}</b> pode fazer.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveAccess} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
+                    <div className="space-y-0.5">
+                      <label className="text-sm font-bold block">Cadastrar Funcionários</label>
+                      <span className="text-xs text-muted-foreground">Adicionar novos nomes aos setores</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 accent-primary rounded cursor-pointer"
+                      checked={accessForm.can_register}
+                      onChange={e => setAccessForm({ ...accessForm, can_register: e.target.checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
+                    <div className="space-y-0.5">
+                      <label className="text-sm font-bold block">Editar Nomes</label>
+                      <span className="text-xs text-muted-foreground">Corrigir nomes de funcionários</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 accent-primary rounded cursor-pointer"
+                      checked={accessForm.can_edit}
+                      onChange={e => setAccessForm({ ...accessForm, can_edit: e.target.checked })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button type="button" variant="ghost" onClick={() => setIsAccessModalOpen(false)} className="flex-1 font-bold rounded-xl">
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="flex-1 font-bold rounded-xl shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-700">
+                    Salvar Acessos
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
