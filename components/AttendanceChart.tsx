@@ -1,10 +1,16 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 type Props = { data: Array<{ date: string; present: number; absent: number }>; };
 
 export default function AttendanceChart({ data }: Props) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-72 flex items-center justify-center bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-black/40 dark:to-white/5 rounded-xl">
@@ -13,22 +19,26 @@ export default function AttendanceChart({ data }: Props) {
     );
   }
 
-  return (
-    <div className="w-full" style={{ height: '288px', minHeight: '288px' }}>
-      <div className="w-full h-full bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-black/40 dark:to-white/5 rounded-xl p-3">
-        <div style={{ width: '100%', height: '100%', minHeight: '250px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="present" stroke="#06b6d4" strokeWidth={3} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="absent" stroke="#ec4899" strokeWidth={3} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+  if (!isMounted) {
+    return (
+      <div className="w-full h-72 flex items-center justify-center bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-black/40 dark:to-white/5 rounded-xl">
+        <div className="animate-pulse text-xs text-muted-foreground">Carregando gráfico...</div>
       </div>
+    );
+  }
+
+  return (
+    <div className="w-full bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-black/40 dark:to-white/5 rounded-xl p-3">
+      <ResponsiveContainer width="100%" height={288}>
+        <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="present" stroke="#06b6d4" strokeWidth={3} dot={{ r: 3 }} />
+          <Line type="monotone" dataKey="absent" stroke="#ec4899" strokeWidth={3} dot={{ r: 3 }} />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
