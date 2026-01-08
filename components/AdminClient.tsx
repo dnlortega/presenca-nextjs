@@ -595,7 +595,7 @@ export default function AdminClient() {
                       Nenhuma atividade.
                     </div>
                   )}
-                  <Button variant="ghost" className="w-full text-xs font-bold text-primary">
+                  <Button variant="ghost" className="w-full text-xs font-bold text-primary" onClick={() => setActiveTab('reports')}>
                     Ver histórico <LucideChevronRight className="w-3 h-3 ml-1" />
                   </Button>
                 </CardContent>
