@@ -9,11 +9,6 @@ export const revalidate = 0;
 
 function getSaoPauloDate() {
     const now = new Date();
-    // Ajuste simples para garantir que trabalhamos com o dia correto de SP
-    // O ideal seria usar date-fns-tz ou similar, mas manteremos simples por enquanto
-    // Ajuste simples para garantir que trabalhamos com o dia correto de SP use UTC
-    // O ideal seria usar date-fns-tz ou similar, mas manteremos simples por enquanto
-    const now = new Date();
     // For simple daily matching without TZ libs, we can just use the server time if configured correctly,
     // or assume the input dates from frontend are adjusted.
     // For now, let's just use standard new Date() and we can refine TZ later if needed.
