@@ -17,6 +17,8 @@ model funcionarios {
   setor      setores    @relation(fields: [setor_id], references: [id])
   presencas  presenca[]
 
+  @@index([empresa_id, setor_id])
+  @@index([empresa_id, nome])
   @@index([empresa_id])
   @@index([setor_id])
 }
@@ -27,6 +29,7 @@ model presenca {
   funcionario    funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
   data_hora      DateTime     @default(now()) @db.Date
 
+  @@index([funcionario_id, data_hora])
   @@index([funcionario_id])
   @@index([data_hora])
 }
@@ -39,6 +42,7 @@ model setores {
   status       String?        @default("ativo")
   funcionarios funcionarios[]
 
+  @@index([empresa_id, nome])
   @@index([empresa_id])
 }
 

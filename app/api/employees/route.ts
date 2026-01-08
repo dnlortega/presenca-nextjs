@@ -52,9 +52,10 @@ export async function GET(req: Request) {
 
       where.empresa_id = company.id;
     } else {
-      // Get IDs of allowed companies
+      // Get IDs of allowed companies - Optimized
       const companies = await prisma.empresas.findMany({
-        where: { nome: { in: allowedCompanyNames } }
+        where: { nome: { in: allowedCompanyNames } },
+        select: { id: true }
       });
       where.empresa_id = { in: companies.map(c => c.id) };
     }
