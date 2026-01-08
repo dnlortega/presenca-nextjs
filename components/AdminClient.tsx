@@ -439,38 +439,66 @@ export default function AdminClient() {
   const handleSaveSector = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Validação de duplicidade local
-      const isDuplicate = sectors.some(s =>
-        s.nome.toLowerCase() === sectorForm.nome.toLowerCase() &&
-        s.empresa_id === Number(sectorForm.empresa_id) &&
-        s.id !== editingSector?.id
-      );
+      if (editingSector) {
+        // Validação de duplicidade local para edição
+        const isDuplicate = sectors.some(s =>
+          s.nome.toLowerCase() === sectorForm.nome.toLowerCase() &&
+          s.empresa_id === Number(sectorForm.empresa_id) &&
+          s.id !== editingSector.id
+        );
 
-      if (isDuplicate) {
-        alert('Já existe um setor com este nome nesta empresa!');
-        return;
-      }
+        if (isDuplicate) {
+          alert('Já existe um setor com este nome nesta empresa!');
+          return;
+        }
 
-      const url = editingSector ? `/api/admin/sectors/${editingSector.id}` : '/api/admin/sectors';
-      const method = editingSector ? 'PUT' : 'POST';
+        const res = await fetchNoCache(`/api/admin/sectors/${editingSector.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: sectorForm.nome,
+            empresa_id: Number(sectorForm.empresa_id)
+          }),
+        });
 
-      const res = await fetchNoCache(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: sectorForm.nome,
-          empresa_id: Number(sectorForm.empresa_id)
-        }),
-      });
-
-      if (res.ok) {
-        setIsSectorModalOpen(false);
-        setEditingSector(null);
-        setSectorForm({ nome: '', empresa_id: '' });
-        loadSectors();
+        if (res.ok) {
+          setIsSectorModalOpen(false);
+          setEditingSector(null);
+          setSectorForm({ nome: '', empresa_id: '' });
+          loadSectors();
+        } else {
+          const errorData = await res.json();
+          alert(errorData.error || 'Erro ao editar setor');
+        }
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Erro ao salvar setor');
+        // Bulk Creation Logic
+        const nomes = sectorForm.nome.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+
+        if (nomes.length === 0) {
+          alert('Digite pelo menos um nome de setor.');
+          return;
+        }
+
+        const res = await fetchNoCache('/api/admin/sectors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nomes,
+            empresa_id: Number(sectorForm.empresa_id)
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          setIsSectorModalOpen(false);
+          setEditingSector(null);
+          setSectorForm({ nome: '', empresa_id: '' });
+          loadSectors();
+          if (data.message) alert(data.message);
+        } else {
+          alert(data.error || 'Erro ao criar setores');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -1664,14 +1692,27 @@ export default function AdminClient() {
             <CardContent>
               <form onSubmit={handleSaveSector} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nome do Setor</label>
-                  <input
-                    required
-                    className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                    value={sectorForm.nome}
-                    onChange={e => setSectorForm({ ...sectorForm, nome: e.target.value })}
-                    placeholder="Ex: Recursos Humanos"
-                  />
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">
+                    {editingSector ? 'Nome do Setor' : 'Nomes dos Setores (um por linha)'}
+                  </label>
+                  {editingSector ? (
+                    <input
+                      required
+                      className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+                      value={sectorForm.nome}
+                      onChange={e => setSectorForm({ ...sectorForm, nome: e.target.value })}
+                      placeholder="Ex: Recursos Humanos"
+                    />
+                  ) : (
+                    <textarea
+                      required
+                      rows={5}
+                      className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold resize-none"
+                      value={sectorForm.nome}
+                      onChange={e => setSectorForm({ ...sectorForm, nome: e.target.value })}
+                      placeholder={"Ex:\nRecursos Humanos\nTI\nFinanceiro\nOperacional"}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-1">
