@@ -70,8 +70,10 @@ export async function GET() {
                 // Let's fetch all presences today with relations
                 const presences = await prisma.presenca.findMany({
                     where: {
-                        gte: startToday,
-                        lt: endToday
+                        data_hora: {
+                            gte: startToday,
+                            lt: endToday
+                        }
                     },
                     include: {
                         funcionario: {
