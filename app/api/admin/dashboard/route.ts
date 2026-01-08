@@ -11,8 +11,13 @@ function getSaoPauloDate() {
     const now = new Date();
     // Ajuste simples para garantir que trabalhamos com o dia correto de SP
     // O ideal seria usar date-fns-tz ou similar, mas manteremos simples por enquanto
-    const offset = -3 * 60 * 60 * 1000;
-    return new Date(now.getTime() + offset);
+    // Ajuste simples para garantir que trabalhamos com o dia correto de SP use UTC
+    // O ideal seria usar date-fns-tz ou similar, mas manteremos simples por enquanto
+    const now = new Date();
+    // For simple daily matching without TZ libs, we can just use the server time if configured correctly,
+    // or assume the input dates from frontend are adjusted.
+    // For now, let's just use standard new Date() and we can refine TZ later if needed.
+    return now;
 }
 
 function getDayRange(date: Date) {
@@ -37,69 +42,139 @@ export async function GET() {
         const { start: startSevenDaysAgo } = getDayRange(sevenDaysAgo);
 
         // Parellelize all independent queries
-        const [totalCounts, sectorStats, trendRaw, recentActivities] = await Promise.all([
+        const [totalCount, activeSectorsRaw, dailyCounts, recentRaw] = await Promise.all([
             // 1. Total Today
-            prisma.$queryRawUnsafe<any[]>(
-                'SELECT COUNT(*)::int as count FROM "presenca" WHERE "data_hora" >= $1 AND "data_hora" < $2',
-                startToday, endToday
-            ),
+            prisma.presenca.count({
+                where: {
+                    data_hora: {
+                        gte: startToday,
+                        lt: endToday
+                    }
+                }
+            }),
 
             // 2. Active Sectors Today
-            prisma.$queryRawUnsafe<any[]>(
-                `SELECT s.nome as setor, e.nome as empresa, COUNT(*)::int as count 
-                 FROM "presenca" p 
-                 JOIN "funcionarios" f ON p."funcionario_id" = f.id 
-                 JOIN "setores" s ON f."setor_id" = s.id 
-                 JOIN "empresas" e ON f."empresa_id" = e.id 
-                 WHERE p."data_hora" >= $1 AND p."data_hora" < $2 
-                 GROUP BY s.nome, e.nome 
-                 ORDER BY count DESC`,
-                startToday, endToday
-            ),
+            prisma.presenca.groupBy({
+                by: ['funcionario_id'],
+                where: {
+                    data_hora: {
+                        gte: startToday,
+                        lt: endToday
+                    }
+                },
+                _count: {
+                    _all: true
+                }
+            }).then(async (grouped) => {
+                // Since prisma groupBy doesn't support joining easily to get names in one go for non-aggregate fields in some versions,
+                // and to avoid complexity, we can fetch details.
+                // Actually, a better approach without raw query for this aggregation is hard in simple prisma.
+                // Let's stick to a simpler approach: Get all presences today include relations and aggregate in JS
+                // or keep raw query if it works. But we want to remove raw queries.
 
-            // 3. Weekly Trend (Efficient aggregation)
-            prisma.$queryRawUnsafe<any[]>(
-                `SELECT TO_CHAR(data_hora, 'YYYY-MM-DD') as day, COUNT(*)::int as count
-                 FROM "presenca"
-                 WHERE "data_hora" >= $1 AND "data_hora" < $2
-                 GROUP BY day
-                 ORDER BY day ASC`,
-                startSevenDaysAgo, endToday
-            ),
+                // Let's fetch all presences today with relations
+                const presences = await prisma.presenca.findMany({
+                    where: {
+                        gte: startToday,
+                        lt: endToday
+                    },
+                    include: {
+                        funcionario: {
+                            include: {
+                                setor: true,
+                                empresa: true
+                            }
+                        }
+                    }
+                });
+
+                // Aggregate in JS
+                const statsMap = new Map<string, { setor: string, empresa: string, count: number }>();
+
+                for (const p of presences) {
+                    const key = `${p.funcionario.empresa.nome}-${p.funcionario.setor.nome}`;
+                    if (!statsMap.has(key)) {
+                        statsMap.set(key, {
+                            setor: p.funcionario.setor.nome,
+                            empresa: p.funcionario.empresa.nome,
+                            count: 0
+                        });
+                    }
+                    statsMap.get(key)!.count++;
+                }
+
+                return Array.from(statsMap.values()).sort((a, b) => b.count - a.count);
+            }),
+
+            // 3. Weekly Trend
+            prisma.presenca.groupBy({
+                by: ['data_hora'],
+                where: {
+                    data_hora: {
+                        gte: startSevenDaysAgo,
+                        lt: endToday
+                    }
+                },
+                _count: {
+                    _all: true
+                }
+            }),
 
             // 4. Recent Activity
-            prisma.$queryRawUnsafe<any[]>(
-                `SELECT p.id, f.nome as funcionario, s.nome as setor, e.nome as empresa, p.data_hora 
-                 FROM "presenca" p 
-                 JOIN "funcionarios" f ON p."funcionario_id" = f.id 
-                 JOIN "setores" s ON f."setor_id" = s.id 
-                 JOIN "empresas" e ON f."empresa_id" = e.id 
-                 ORDER BY p.id DESC LIMIT 5`
-            )
+            prisma.presenca.findMany({
+                take: 5,
+                orderBy: { id: 'desc' },
+                include: {
+                    funcionario: {
+                        include: {
+                            setor: true,
+                            empresa: true
+                        }
+                    }
+                }
+            })
         ]);
 
-        const totalToday = totalCounts[0]?.count || 0;
+        const totalToday = totalCount;
+        const sectorStats = activeSectorsRaw || []; // It is the result of the .then block
         const sectorsActive = sectorStats.length;
 
-        // Process trend data to fill in missing days
+        // Process trend data
         const trend = [];
         const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
         for (let i = 6; i >= 0; i--) {
             const d = new Date(todayRef);
             d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0]; // Simple YYYY-MM-DD
+            const dateStr = d.toISOString().split('T')[0];
 
-            // Find count in aggregated data
-            // Note: TO_CHAR in postgres returns string, comparisons should match
-            const dayData = trendRaw.find((t: any) => t.day === dateStr);
+            // Filter dailyCounts for this day
+            // Note: DB timestamp might include time, so strictly grouping by data_hora in Prisma might split by second.
+            // We need to aggregate the JS result properly if we didn't use raw query date truncation.
+            // Since we used groupBy data_hora which includes time, we have many groups. We need to sum them up per day.
+
+            // Re-aggregate dailyCounts (which is actually all records grouped by exact timestamp)
+            // Wait, groupBy data_hora is bad if times are different. 
+            // Better to fetch all records in range and map in JS for safety without raw SQL date functions.
+            const countForDay = (dailyCounts as any[]).filter(c => {
+                const cDate = new Date(c.data_hora).toISOString().split('T')[0];
+                return cDate === dateStr;
+            }).reduce((acc, curr) => acc + curr._count._all, 0);
 
             trend.push({
                 date: days[d.getUTCDay()],
-                present: dayData?.count || 0,
-                absent: 0, // Placeholder
+                present: countForDay,
+                absent: 0,
             });
         }
+
+        const recentActivities = recentRaw.map(p => ({
+            id: p.id,
+            funcionario: p.funcionario.nome,
+            setor: p.funcionario.setor.nome,
+            empresa: p.funcionario.empresa.nome,
+            data_hora: p.data_hora
+        }));
 
         return jsonResponse({
             totalToday,
