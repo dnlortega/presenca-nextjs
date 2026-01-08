@@ -105,9 +105,13 @@ const employeeData = {
   ]
 };
 
-// Função para extrair apenas o primeiro nome
-function getFirstName(fullName: string): string {
-  return fullName.trim().split(' ')[0];
+// Função para extrair nome e sobrenome (primeiras duas palavras)
+function getFirstAndLastName(fullName: string): string {
+  const parts = fullName.trim().split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0]} ${parts[1]}`;
+  }
+  return parts[0]; // Se tiver apenas um nome, retorna ele
 }
 
 async function main() {
@@ -155,13 +159,16 @@ async function main() {
 
       console.log(`  ✓ Setor: ${sectorName} (ID: ${sector.id})`);
 
+      // Ordenar funcionários alfabeticamente
+      const sortedEmployees = [...employees].sort((a, b) => a.localeCompare(b));
+
       // Adicionar funcionários do setor
-      for (const fullName of employees) {
-        const firstName = getFirstName(fullName);
+      for (const fullName of sortedEmployees) {
+        const employeeName = getFirstAndLastName(fullName);
 
         await prisma.funcionarios.create({
           data: {
-            nome: firstName,
+            nome: employeeName,
             empresa_id: empresa.id,
             setor_id: sector.id,
             valor: null
@@ -169,10 +176,10 @@ async function main() {
         });
 
         totalEmployeesAdded++;
-        console.log(`  ➕ Adicionado: ${firstName}`);
+        console.log(`  ➕ Adicionado: ${employeeName}`);
       }
 
-      console.log(`  ✅ ${employees.length} funcionários adicionados ao setor ${sectorName}`);
+      console.log(`  ✅ ${sortedEmployees.length} funcionários adicionados ao setor ${sectorName}`);
     }
 
     console.log(`\n🎉 Processo concluído!`);
