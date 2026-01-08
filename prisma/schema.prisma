@@ -42,6 +42,7 @@ model setores {
   status       String?        @default("ativo")
   funcionarios funcionarios[]
 
+  @@unique([empresa_id, nome])
   @@index([empresa_id, nome])
   @@index([empresa_id])
 }
