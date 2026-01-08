@@ -163,7 +163,6 @@ export async function GET() {
             totalToday,
             sectorsActive,
             sectorStats,
-            sectorStats,
             companyDistribution,
             recentActivities
         });
