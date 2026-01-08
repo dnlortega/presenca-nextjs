@@ -127,6 +127,8 @@ export default function AdminClient() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [isLoadingSectors, setIsLoadingSectors] = useState(false);
   const [isSeedingEmployees, setIsSeedingEmployees] = useState(false);
+  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [accessForm, setAccessForm] = useState({ can_register: false, can_edit: false });
 
   useEffect(() => {
     if (activeTab === 'overview') loadDashboard();
@@ -283,6 +285,38 @@ export default function AdminClient() {
     setSelectedUser(user);
     setUserCompForm(user.empresas || []);
     setIsUserCompModalOpen(true);
+  };
+
+  const openAccessModal = (user: User) => {
+    setSelectedUser(user);
+    setAccessForm({
+      can_register: user.can_register || false,
+      can_edit: user.can_edit || false
+    });
+    setIsAccessModalOpen(true);
+  };
+
+  const handleSaveAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    try {
+      // Parallel update
+      await Promise.all([
+        fetchNoCache(`/api/admin/users/${selectedUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ can_register: accessForm.can_register }),
+        }),
+        fetchNoCache(`/api/admin/users/${selectedUser.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ can_edit: accessForm.can_edit }),
+        })
+      ]);
+
+      setIsAccessModalOpen(false);
+      loadUsers();
+    } catch (e) { console.error(e); }
   };
 
   const toggleUserCompany = (companyName: string) => {
@@ -1122,34 +1156,32 @@ export default function AdminClient() {
                                   <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
                                 </Badge>
                                 {u.role === 'educador' && (
-                                  <div className="flex gap-1">
-                                    <button
-                                      onClick={() => updateUserCanRegister(u.id, !u.can_register)}
-                                      className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border transition-all ${u.can_register
-                                        ? 'border-blue-500/30 text-blue-500 bg-blue-500/5 hover:bg-blue-500/10'
-                                        : 'border-muted-foreground/30 text-muted-foreground bg-muted/5 hover:bg-muted/10'
-                                        }`}
-                                    >
-                                      {u.can_register ? 'Cadastra: SIM' : 'Cadastra: NÃO'}
-                                    </button>
-                                    <button
-                                      onClick={() => updateUserCanEdit(u.id, !u.can_edit)}
-                                      className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border transition-all ${u.can_edit
-                                        ? 'border-purple-500/30 text-purple-500 bg-purple-500/5 hover:bg-purple-500/10'
-                                        : 'border-muted-foreground/30 text-muted-foreground bg-muted/5 hover:bg-muted/10'
-                                        }`}
-                                    >
-                                      {u.can_edit ? 'Edita: SIM' : 'Edita: NÃO'}
-                                    </button>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {(u.can_register || u.can_edit) ? (
+                                      <>
+                                        {u.can_register && <Badge variant="secondary" className="text-[9px] h-4 px-1">Registrar</Badge>}
+                                        {u.can_edit && <Badge variant="secondary" className="text-[9px] h-4 px-1">Editar</Badge>}
+                                      </>
+                                    ) : (
+                                      <span className="text-[9px] text-muted-foreground opacity-70">Sem permissões extras</span>
+                                    )}
                                   </div>
                                 )}
                               </div>
                             )}
                           </TableCell>
                           <TableCell className="text-right space-x-1">
-                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => updateUserRole(u.id, 'educador')}>
-                              EDUCADOR
-                            </Button>
+                            {u.role === 'educador' && (
+                              <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => openAccessModal(u)}>
+                                ACESSOS
+                              </Button>
+                            )}
+                            {u.role !== 'educador' && (
+                              <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => updateUserRole(u.id, 'educador')}>
+                                EDUCADOR
+                              </Button>
+                            )}
+
                             <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => updateUserRole(u.id, 'admin')}>
                               ADMIN
                             </Button>

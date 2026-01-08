@@ -6,6 +6,6 @@ import EducatorClient from '../../components/EducatorClient';
 export default async function EducatorPage() {
   const session = await getServerSession(authOptions as any);
   const s: any = session;
-  if (!s || !['educador', 'admin'].includes(s?.user?.role)) redirect('/login');
+  if (!s || s?.user?.role !== 'educador') redirect('/login');
   return <EducatorClient />;
 }

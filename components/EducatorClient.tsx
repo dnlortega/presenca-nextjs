@@ -20,14 +20,23 @@ import {
   LucideX,
   LucideCheckSquare,
   LucideEdit2,
-  LucideAlertCircle
+  LucideAlertCircle,
+  LucideSettings
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ModeToggle } from "./ModeToggle";
-import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 export default function EducatorClient() {
   const { data: session } = useSession();
@@ -238,33 +247,61 @@ export default function EducatorClient() {
         <span className="font-black text-[10px] sm:text-xs uppercase tracking-tighter">Educador<span className="text-primary">.Pro</span></span>
       </div>
       <div className="flex items-center gap-2 sm:gap-3">
-        {session?.user && (
-          <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/40 border border-border/50">
-            <Avatar className="h-5 w-5 sm:h-6 sm:w-6 border border-primary/10">
-              <AvatarFallback className="text-[8px] sm:text-[9px] font-black bg-primary/10 text-primary">
-                {session.user.name?.substring(0, 2).toUpperCase() || 'ED'}
-              </AvatarFallback>
-            </Avatar>
-            <span className="hidden sm:block text-[9px] font-black uppercase tracking-tight text-muted-foreground/80 max-w-[100px] truncate">
-              {session.user.name?.split(' ')[0]}
-            </span>
-          </div>
-        )}
-
         {(session?.user as any)?.can_register && !isBulkMode && (
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() => { setIsBulkMode(true); setFeedback(null); }}
-            className="text-[9px] sm:text-[10px] h-8 font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5 gap-1.5"
+            className="h-9 w-9 border-primary/20 text-primary hover:bg-primary/5 rounded-full hover:scale-105 transition-all"
+            title="Cadastrar Funcionários"
           >
-            <LucideUserPlus className="w-3.5 h-3.5" /> Cadastrar
+            <LucideUserPlus className="w-4 h-4" />
           </Button>
         )}
+
         <ModeToggle />
-        <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/login' })} className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-destructive px-2 sm:px-3">
-          Sair
-        </Button>
+
+        {session?.user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 border border-primary/10 hover:border-primary/50 transition-all overflow-hidden">
+                <Avatar className="h-full w-full">
+                  {session.user.image ? (
+                    <AvatarImage src={session.user.image} alt={session.user.name || ''} />
+                  ) : (
+                    <AvatarFallback className="text-[10px] font-black bg-primary/10 text-primary">
+                      {session.user.name?.substring(0, 2).toUpperCase() || 'ED'}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{session.user.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {session.user.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <LucideSettings className="mr-2 h-4 w-4" />
+                <span>Configurações</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <LucideEdit2 className="mr-2 h-4 w-4" />
+                <span>Editar Perfil</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })} className="text-destructive focus:text-destructive">
+                <LucideLogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );
@@ -442,11 +479,12 @@ export default function EducatorClient() {
                     {employees.length > 0 && (
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={toggleAllEmployees}
-                        className="text-[9px] sm:text-[10px] h-8 font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5 gap-1.5"
+                        className="h-8 w-8 text-primary hover:bg-primary/5 rounded-full"
+                        title="Selecionar Todos"
                       >
-                        <LucideUsers className="w-3.5 h-3.5" /> Selecionar Todos
+                        <LucideUsers className="w-4 h-4" />
                       </Button>
                     )}
                     <Badge variant="outline" className="text-[9px] sm:text-[10px] font-black border-primary/20 text-primary">
@@ -544,10 +582,10 @@ export default function EducatorClient() {
                               variant="ghost"
                               size="icon"
                               onClick={(e) => { e.stopPropagation(); deleteAttendance(isAlreadyPresent.id); }}
-                              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all"
                               title="Remover presença"
                             >
-                              <LucideTrash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              <LucideTrash2 className="w-4 h-4" />
                             </Button>
                           )}
                         </div>
