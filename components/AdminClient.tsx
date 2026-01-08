@@ -530,14 +530,17 @@ export default function AdminClient() {
                 </CardContent>
               </Card>
 
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
+              <Card
+                className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-pointer transition-all hover:bg-card/60"
+                onClick={() => setActiveTab('reports')}
+              >
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Relatórios</CardTitle>
                   <LucideFileText className="w-4 h-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-black">12</div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Gerados este mês</p>
+                  <div className="text-2xl font-black">Ver todos</div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Clique para acessar o histórico</p>
                 </CardContent>
               </Card>
             </section>
