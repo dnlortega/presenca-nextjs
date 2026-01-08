@@ -8,8 +8,8 @@ const COLORS = ['#0891b2', '#0ea5e9', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e'
 
 export default function CompanyDistributionChart({ data }: Props) {
     return (
-        <div className="h-72 bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-black/40 dark:to-white/5 rounded-xl p-3">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="h-72 bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-black/40 dark:to-white/5 rounded-xl p-3" style={{ minHeight: '288px' }}>
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
                 <PieChart>
                     <Pie
                         data={data}
