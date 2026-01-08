@@ -456,14 +456,14 @@ export default function EducatorClient() {
                               <input
                                 className="flex-1 bg-transparent border-none text-sm font-bold focus:ring-0 px-0 py-0"
                                 autoFocus
-                                value={editingEmployee.name}
-                                onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                                value={editingEmployee?.name || ''}
+                                onChange={(e) => setEditingEmployee(prev => prev ? { ...prev, name: e.target.value } : null)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') updateEmployeeName(emp.id, editingEmployee.name);
+                                  if (e.key === 'Enter' && editingEmployee) updateEmployeeName(emp.id, editingEmployee.name);
                                   if (e.key === 'Escape') setEditingEmployee(null);
                                 }}
                               />
-                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => updateEmployeeName(emp.id, editingEmployee.name)}>
+                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => editingEmployee && updateEmployeeName(emp.id, editingEmployee.name)}>
                                 <LucideCheckCircle2 className="w-4 h-4 text-emerald-500" />
                               </Button>
                               <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingEmployee(null)}>
