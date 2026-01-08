@@ -103,17 +103,20 @@ export async function GET() {
                 return Array.from(statsMap.values()).sort((a, b) => b.count - a.count);
             }),
 
-            // 3. Weekly Trend
-            prisma.presenca.groupBy({
-                by: ['data_hora'],
+            // 3. Distribution by Company
+            prisma.presenca.findMany({
                 where: {
                     data_hora: {
-                        gte: startSevenDaysAgo,
+                        gte: startToday,
                         lt: endToday
                     }
                 },
-                _count: {
-                    _all: true
+                include: {
+                    funcionario: {
+                        include: {
+                            empresa: true
+                        }
+                    }
                 }
             }),
 
@@ -136,34 +139,17 @@ export async function GET() {
         const sectorStats = activeSectorsRaw || []; // It is the result of the .then block
         const sectorsActive = sectorStats.length;
 
-        // Process trend data
-        const trend = [];
-        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date(todayRef);
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
-
-            // Filter dailyCounts for this day
-            // Note: DB timestamp might include time, so strictly grouping by data_hora in Prisma might split by second.
-            // We need to aggregate the JS result properly if we didn't use raw query date truncation.
-            // Since we used groupBy data_hora which includes time, we have many groups. We need to sum them up per day.
-
-            // Re-aggregate dailyCounts (which is actually all records grouped by exact timestamp)
-            // Wait, groupBy data_hora is bad if times are different. 
-            // Better to fetch all records in range and map in JS for safety without raw SQL date functions.
-            const countForDay = (dailyCounts as any[]).filter(c => {
-                const cDate = new Date(c.data_hora).toISOString().split('T')[0];
-                return cDate === dateStr;
-            }).reduce((acc, curr) => acc + curr._count._all, 0);
-
-            trend.push({
-                date: days[d.getUTCDay()],
-                present: countForDay,
-                absent: 0,
-            });
+        // Process Company Distribution
+        const companyMap = new Map<string, number>();
+        for (const p of dailyCounts) {
+            const companyName = p.funcionario.empresa.nome;
+            companyMap.set(companyName, (companyMap.get(companyName) || 0) + 1);
         }
+
+        const companyDistribution = Array.from(companyMap.entries()).map(([name, value]) => ({
+            name,
+            value
+        }));
 
         const recentActivities = recentRaw.map(p => ({
             id: p.id,
@@ -177,7 +163,8 @@ export async function GET() {
             totalToday,
             sectorsActive,
             sectorStats,
-            trend,
+            sectorStats,
+            companyDistribution,
             recentActivities
         });
 

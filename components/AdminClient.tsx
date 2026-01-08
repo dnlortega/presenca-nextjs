@@ -34,8 +34,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./ModeToggle";
-import AttendanceChart from "./AttendanceChart";
 import { fetchNoCache } from "../lib/fetch-helpers";
+import CompanyDistributionChart from "./CompanyDistributionChart";
 
 type Tab = 'overview' | 'companies' | 'sectors' | 'employees' | 'users' | 'reports' | 'settings';
 
@@ -51,7 +51,7 @@ type DashboardData = {
   totalToday: number;
   sectorsActive: number;
   sectorStats?: { setor: string; empresa: string; count: number }[];
-  trend: { date: string; present: number; absent: number }[];
+  companyDistribution?: { name: string; value: number }[];
   recentActivities: RecentActivity[];
 };
 
@@ -549,20 +549,12 @@ export default function AdminClient() {
               <Card className="lg:col-span-2 border-none shadow-sm">
                 <CardHeader>
                   <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">Tendência Semanal</CardTitle>
-                    <div className="flex gap-4">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" /> PRESENTES
-                      </span>
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
-                        <div className="w-2 h-2 rounded-full bg-muted" /> FALTAS
-                      </span>
-                    </div>
+                    <CardTitle className="text-lg">Distribuição por Empresa</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {dashboardData?.trend ? (
-                    <AttendanceChart data={dashboardData.trend} />
+                  {dashboardData?.companyDistribution ? (
+                    <CompanyDistributionChart data={dashboardData.companyDistribution} />
                   ) : (
                     <div className="h-64 w-full bg-muted/20 rounded-xl animate-shimmer relative overflow-hidden flex items-center justify-center">
                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Carregando métricas...</div>
