@@ -21,7 +21,7 @@ export async function GET() {
                 email: true,
                 role: true,
                 can_register: true,
-                // can_edit: true,
+                can_edit: true,
                 created_at: true,
                 usuario_empresas: {
                     select: {

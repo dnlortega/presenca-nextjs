@@ -238,6 +238,19 @@ export default function EducatorClient() {
         <span className="font-black text-[10px] sm:text-xs uppercase tracking-tighter">Educador<span className="text-primary">.Pro</span></span>
       </div>
       <div className="flex items-center gap-2 sm:gap-3">
+        {session?.user && (
+          <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-muted/40 border border-border/50">
+            <Avatar className="h-5 w-5 sm:h-6 sm:w-6 border border-primary/10">
+              <AvatarFallback className="text-[8px] sm:text-[9px] font-black bg-primary/10 text-primary">
+                {session.user.name?.substring(0, 2).toUpperCase() || 'ED'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="hidden sm:block text-[9px] font-black uppercase tracking-tight text-muted-foreground/80 max-w-[100px] truncate">
+              {session.user.name?.split(' ')[0]}
+            </span>
+          </div>
+        )}
+
         {(session?.user as any)?.can_register && !isBulkMode && (
           <Button
             variant="outline"

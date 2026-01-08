@@ -20,11 +20,9 @@ export const authOptions: NextAuthOptions = {
                     const cleanUsername = username.trim();
                     const cleanPassword = password.trim();
 
-                    const users = await prisma.$queryRawUnsafe<any[]>(
-                        'SELECT * FROM "usuarios" WHERE "username" = $1 LIMIT 1',
-                        cleanUsername
-                    );
-                    const user = users[0];
+                    const user = await prisma.usuarios.findUnique({
+                        where: { username: cleanUsername }
+                    });
 
                     if (!user || !user.password_hash) {
                         return null;
@@ -56,32 +54,33 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async signIn({ user, account }) {
             if (account?.provider === 'google' && user.email) {
-                const users = await prisma.$queryRawUnsafe<any[]>(
-                    'SELECT * FROM "usuarios" WHERE "email" = $1 LIMIT 1',
-                    user.email
-                );
-                const existingUser = users[0];
+                const existingUser = await prisma.usuarios.findUnique({
+                    where: { email: user.email }
+                });
 
                 if (!existingUser) {
-                    await prisma.$executeRawUnsafe(
-                        'INSERT INTO "usuarios" (email, username, role, can_register, updated_at) VALUES ($1, $2, $3::"Role", $4, NOW())',
-                        user.email,
-                        user.email.split('@')[0],
-                        'pendente',
-                        false
-                    );
+                    await prisma.usuarios.create({
+                        data: {
+                            email: user.email,
+                            username: user.email.split('@')[0],
+                            role: 'pendente',
+                            can_register: false
+                        }
+                    });
                 }
             }
             return true;
         },
         async jwt({ token, user }) {
             if (user) {
-                const users = await prisma.$queryRawUnsafe<any[]>(
-                    'SELECT * FROM "usuarios" WHERE "email" = $1 OR "username" = $2 LIMIT 1',
-                    token.email || '',
-                    token.name || ''
-                );
-                const dbUser = users[0];
+                const dbUser = await prisma.usuarios.findFirst({
+                    where: {
+                        OR: [
+                            { email: token.email || undefined },
+                            { username: token.name || undefined }
+                        ]
+                    }
+                });
 
                 token.role = dbUser?.role || 'pendente';
                 token.id = dbUser?.id;
