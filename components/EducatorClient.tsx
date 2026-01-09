@@ -17,11 +17,13 @@ import {
   LucideUserX,
   LucideUserPlus,
   LucidePlus,
+  LucideMinus,
   LucideX,
   LucideCheckSquare,
   LucideEdit2,
   LucideAlertCircle,
-  LucideSettings
+  LucideSettings,
+  LucideType
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -37,6 +39,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { toast } from "sonner";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
 
 export default function EducatorClient() {
   const { data: session } = useSession();
@@ -47,9 +55,9 @@ export default function EducatorClient() {
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-  const [presentToday, setPresentToday] = useState<{ id: number, funcionario: string }[]>([]);
+  const [presentToday, setPresentToday] = useState<{ id: number, funcionario_id: number, funcionario: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null);
+
 
   // Bulk Registration State
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -57,6 +65,7 @@ export default function EducatorClient() {
   const [bulkSector, setBulkSector] = useState('');
   const [bulkNames, setBulkNames] = useState<string[]>(['', '', '', '', '']); // 5 lines by default
   const [editingEmployee, setEditingEmployee] = useState<{ id: number, name: string } | null>(null);
+  const [fontSizeLevel, setFontSizeLevel] = useState(0); // 0: Normal, 1: Large, 2: Extra Large
 
   useEffect(() => {
     loadMyCompanies();
@@ -74,17 +83,16 @@ export default function EducatorClient() {
         body: JSON.stringify({ nome: newName }),
       });
       if (res.ok) {
-        setFeedback({ type: 'success', msg: 'Nome atualizado!' });
+        toast.success('Nome atualizado!');
         setEditingEmployee(null);
         if (selectedSector) loadEmployees(selectedSector);
-        setTimeout(() => setFeedback(null), 2000);
       } else {
         const d = await res.json();
-        setFeedback({ type: 'error', msg: d.error || 'Erro ao atualizar' });
+        toast.error(d.error || 'Erro ao atualizar');
       }
     } catch (e) {
       console.error(e);
-      setFeedback({ type: 'error', msg: 'Erro de conexão' });
+      toast.error('Erro de conexão');
     }
     setLoading(false);
   };
@@ -128,14 +136,13 @@ export default function EducatorClient() {
   };
 
   const deleteAttendance = async (attendanceId: number) => {
-    if (!confirm('Deseja remover esta presença?')) return;
+    // Confirmation handled by Popover
     setLoading(true);
     try {
       const res = await fetchNoCache(`/api/attendance?id=${attendanceId}`, { method: 'DELETE' });
       if (res.ok) {
         setPresentToday(prev => prev.filter(p => p.id !== attendanceId));
-        setFeedback({ type: 'info', msg: 'Presença removida.' });
-        setTimeout(() => setFeedback(null), 2000);
+        toast.info('Presença removida.');
       }
     } catch (e) { console.error(e); }
     setLoading(false);
@@ -177,32 +184,28 @@ export default function EducatorClient() {
       const result = await res.json();
 
       if (res.ok) {
-        setFeedback({
-          type: 'success',
-          msg: `${result.count} presenças registradas com sucesso!`
-        });
+        toast.success(`${result.count} presenças registradas com sucesso!`);
         setTimeout(() => {
           setStep(1);
           setSelectedEmployees([]);
-          setFeedback(null);
         }, 3000);
       } else {
-        setFeedback({ type: 'error', msg: result.error || 'Erro ao registrar' });
+        toast.error(result.error || 'Erro ao registrar');
       }
     } catch (e) {
-      setFeedback({ type: 'error', msg: 'Falha na conexão' });
+      toast.error('Falha na conexão');
     }
     setLoading(false);
   };
 
   const handleBulkSubmit = async () => {
     if (!bulkCompany || !bulkSector) {
-      setFeedback({ type: 'error', msg: 'Selecione Empresa e Setor' });
+      toast.error('Selecione Empresa e Setor');
       return;
     }
     const names = bulkNames.filter(n => n.trim().length > 0);
     if (names.length === 0) {
-      setFeedback({ type: 'error', msg: 'Adicione pelo menos um nome' });
+      toast.error('Adicione pelo menos um nome');
       return;
     }
 
@@ -220,20 +223,16 @@ export default function EducatorClient() {
 
       const result = await res.json();
       if (res.ok) {
-        setFeedback({
-          type: 'success',
-          msg: result.message || `${result.count} cadastrados com sucesso!`
-        });
+        toast.success(result.message || `${result.count} cadastrados com sucesso!`);
         setBulkNames(['', '', '', '', '']);
         setTimeout(() => {
           setIsBulkMode(false);
-          setFeedback(null);
         }, 2000);
       } else {
-        setFeedback({ type: 'error', msg: result.error || 'Erro ao cadastrar' });
+        toast.error(result.error || 'Erro ao cadastrar');
       }
     } catch (e) {
-      setFeedback({ type: 'error', msg: 'Erro de conexão' });
+      toast.error('Erro de conexão');
     }
     setLoading(false);
   };
@@ -251,7 +250,7 @@ export default function EducatorClient() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => { setIsBulkMode(true); setFeedback(null); }}
+            onClick={() => { setIsBulkMode(true); }}
             className="h-9 w-9 border-primary/20 text-primary hover:bg-primary/5 rounded-full hover:scale-105 transition-all"
             title="Cadastrar Funcionários"
           >
@@ -320,12 +319,8 @@ export default function EducatorClient() {
           </div>
 
           <div className="space-y-4">
-            {feedback && (
-              <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${feedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
-                {feedback.type === 'success' ? <LucideCheckCircle2 className="w-4 h-4" /> : <LucideAlertCircle className="w-4 h-4" />}
-                {feedback.msg}
-              </div>
-            )}
+
+            {/* Feedback removed - using toast */}
 
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Empresa</label>
@@ -415,14 +410,8 @@ export default function EducatorClient() {
           </div>
 
           <div className="space-y-3 sm:space-y-4 animate-scale-in [animation-delay:400ms]">
-            {feedback && (
-              <div className={`p-3 sm:p-4 rounded-xl text-[10px] sm:text-xs font-bold animate-in fade-in slide-in-from-top-2 flex items-center gap-2 ${feedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                'bg-destructive/10 text-destructive border border-destructive/20'
-                }`}>
-                <LucideCheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                {feedback.msg}
-              </div>
-            )}
+
+            {/* Feedback removed - using toast */}
 
             {step === 1 && (
               <div className="space-y-2.5 sm:space-y-3">
@@ -476,6 +465,31 @@ export default function EducatorClient() {
                     <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground truncate max-w-[120px] sm:max-w-none">{selectedSector}</span>
                   </button>
                   <div className="flex items-center gap-2">
+                    {/* Font Size Controls */}
+                    <div className="flex items-center bg-muted/30 rounded-lg p-0.5 border border-border/50">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFontSizeLevel(prev => Math.max(0, prev - 1))}
+                        disabled={fontSizeLevel === 0}
+                        className="h-6 w-6 sm:h-7 sm:w-7 rounded-md hover:bg-background hover:shadow-sm"
+                        title="Diminuir Fonte"
+                      >
+                        <LucideMinus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      </Button>
+                      <LucideType className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground mx-1" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFontSizeLevel(prev => Math.min(2, prev + 1))}
+                        disabled={fontSizeLevel === 2}
+                        className="h-6 w-6 sm:h-7 sm:w-7 rounded-md hover:bg-background hover:shadow-sm"
+                        title="Aumentar Fonte"
+                      >
+                        <LucidePlus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      </Button>
+                    </div>
+
                     {employees.length > 0 && (
                       <Button
                         variant="ghost"
@@ -495,13 +509,21 @@ export default function EducatorClient() {
 
                 <div className="grid grid-cols-1 gap-2 sm:gap-2.5 pb-28 sm:pb-24">
                   {employees.length > 0 ? (
-                    employees.map(emp => {
-                      const isAlreadyPresent = presentToday.find(p => p.id === emp.id);
+                    employees.map((emp, index) => {
+                      const isAlreadyPresent = presentToday.find(p => p.funcionario_id === emp.id);
+
                       const isSelected = selectedEmployees.includes(emp.id);
+
+                      const fontClass = fontSizeLevel === 0 ? 'text-[11px] sm:text-xs' : fontSizeLevel === 1 ? 'text-sm sm:text-base' : 'text-base sm:text-lg';
+                      const avatarSize = fontSizeLevel === 0 ? 'h-8 w-8 sm:h-9 sm:w-9' : fontSizeLevel === 1 ? 'h-9 w-9 sm:h-10 sm:w-10' : 'h-10 w-10 sm:h-11 sm:w-11';
 
                       return (
 
-                        <div key={emp.id} className="relative group">
+                        <div
+                          key={emp.id}
+                          className="relative group animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-backwards"
+                          style={{ animationDelay: `${Math.min(index * 30, 1000)}ms` }}
+                        >
                           {editingEmployee?.id === emp.id ? (
                             <div className="w-full flex items-center gap-2 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-primary bg-background shadow-lg z-10">
                               <input
@@ -533,7 +555,7 @@ export default function EducatorClient() {
                                 }`}
 
                             >
-                              <Avatar className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg border transition-colors ${isAlreadyPresent ? 'border-emerald-500/50' : isSelected ? 'border-primary' : 'border-border'
+                              <Avatar className={`${avatarSize} rounded-lg border transition-colors ${isAlreadyPresent ? 'border-emerald-500/50' : isSelected ? 'border-primary' : 'border-border'
                                 }`}>
                                 <AvatarFallback className={`text-[10px] sm:text-xs font-black ${isAlreadyPresent
                                   ? 'bg-emerald-500 text-white'
@@ -543,7 +565,7 @@ export default function EducatorClient() {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <div className={`text-[11px] sm:text-xs font-black tracking-tight truncate ${isAlreadyPresent ? 'text-emerald-600' : isSelected ? 'text-primary' : ''
+                                <div className={`${fontClass} font-black tracking-tight truncate transition-all duration-300 ${isAlreadyPresent ? 'text-emerald-600' : isSelected ? 'text-primary' : ''
                                   }`}>
                                   {emp.nome}
                                 </div>
@@ -554,9 +576,7 @@ export default function EducatorClient() {
                               {isSelected && !isAlreadyPresent && (
                                 <LucideCheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary animate-in zoom-in duration-300 flex-shrink-0" />
                               )}
-                              {isAlreadyPresent && (
-                                <LucideCheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 flex-shrink-0" />
-                              )}
+
 
                             </button>
                           )}
@@ -578,15 +598,28 @@ export default function EducatorClient() {
                           )}
 
                           {isAlreadyPresent && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => { e.stopPropagation(); deleteAttendance(isAlreadyPresent.id); }}
-                              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full transition-all"
-                              title="Remover presença"
-                            >
-                              <LucideTrash2 className="w-5 h-5" />
-                            </Button>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => { e.stopPropagation(); }}
+                                  className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full transition-all"
+                                  title="Remover presença"
+                                >
+                                  <LucideTrash2 className="w-5 h-5" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent align="end" className="w-auto p-4 bg-background border-border shadow-2xl">
+                                <div className="flex flex-col gap-3">
+                                  <p className="text-sm font-bold text-muted-foreground">Remover presença?</p>
+                                  <div className="flex gap-2">
+                                    <Button size="sm" variant="ghost" className="h-8">Cancelar</Button>
+                                    <Button size="sm" variant="destructive" className="h-8" onClick={() => deleteAttendance(isAlreadyPresent.id)}>Sim, remover</Button>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           )}
                         </div>
                       );

@@ -23,7 +23,13 @@ import {
   LucideLayers,
   LucideAlertCircle,
   LucideX,
-  LucideMenu
+
+  LucideMenu,
+  LucideInfo,
+  LucideCode2,
+  LucideDatabase,
+  LucideLock,
+  LucideZap
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 
@@ -37,7 +43,7 @@ import { ModeToggle } from "./ModeToggle";
 import { fetchNoCache } from "../lib/fetch-helpers";
 import CompanyDistributionChart from "./CompanyDistributionChart";
 
-type Tab = 'overview' | 'companies' | 'sectors' | 'employees' | 'users' | 'reports' | 'settings';
+type Tab = 'overview' | 'companies' | 'sectors' | 'employees' | 'users' | 'reports' | 'settings' | 'about';
 
 type RecentActivity = {
   id: number;
@@ -1418,6 +1424,141 @@ export default function AdminClient() {
             </Card>
           </div>
         );
+
+      case 'about':
+        return (
+          <div className="space-y-6 animate-scale-in max-w-5xl mx-auto">
+            <Card className="border-none shadow-lg bg-gradient-to-br from-primary/10 via-background to-background">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-primary/20 rounded-lg">
+                    <LucideInfo className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl font-black uppercase tracking-tight">Presença<span className="text-primary italic">.Pro</span></CardTitle>
+                    <CardDescription className="font-medium">Sistema Corporativo de Gestão de Frequência & Controle de Acessos</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  O <b>Presença.Pro</b> é uma solução full-stack moderna, projetada para orquestrar o controle de presença em ambientes corporativos multi-tenancy.
+                  A plataforma elimina processos manuais, oferecendo uma interface reativa, dados em tempo real e uma hierarquia robusta de permissões.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="font-bold">v1.2.0 Stable</Badge>
+                  <Badge variant="outline" className="border-primary/50 text-primary font-bold">Enterprise Ready</Badge>
+                  <Badge variant="outline" className="font-bold">LGPD Compliant</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tech Stack */}
+              <Card className="border-none shadow-sm hover-lift transition-all">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base font-black uppercase tracking-widest">
+                    <LucideCode2 className="w-4 h-4 text-blue-500" /> Stack Tecnológico
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
+                      <span className="font-bold">Framework Core</span>
+                      <Badge>Next.js 15 (App Router)</Badge>
+                    </li>
+                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
+                      <span className="font-bold">Linguagem</span>
+                      <Badge variant="outline" className="border-blue-500/30 text-blue-600">TypeScript 5.0+</Badge>
+                    </li>
+                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
+                      <span className="font-bold">Estilização</span>
+                      <Badge variant="outline" className="border-cyan-500/30 text-cyan-600">TailwindCSS 4 + Shadcn UI</Badge>
+                    </li>
+                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
+                      <span className="font-bold">Database & ORM</span>
+                      <div className="flex gap-1">
+                        <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">Prisma</Badge>
+                        <Badge variant="outline" className="border-indigo-500/30 text-indigo-600">PostgreSQL (Neon)</Badge>
+                      </div>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Destaques de Arquitetura */}
+              <Card className="border-none shadow-sm hover-lift transition-all">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base font-black uppercase tracking-widest">
+                    <LucideZap className="w-4 h-4 text-yellow-500" /> Arquitetura & Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black uppercase text-primary">Server Actions & No-Cache Strategy</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Todas as mutações de dados utilizam Server Actions seguras. O sistema implementa uma estratégia de <code className="bg-muted px-1 rounded">fetchNoCache</code> personalizada para garantir consistência de dados em tempo real, crucial para controle de presença.
+                    </p>
+                  </div>
+                  <div className="space-y-1 pt-2">
+                    <h4 className="text-xs font-black uppercase text-primary">Otimização de Renderização</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Uso extensivo de componentes server-side onde possível, com ilhas de interatividade (Client Components) otimizadas para reduzir TBT (Total Blocking Time). Animações via CSS nativo e classes utilitárias para 60fps constantes.
+                    </p>
+                  </div>
+                  <div className="space-y-1 pt-2">
+                    <h4 className="text-xs font-black uppercase text-primary">Segurança Robusta</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Autenticação via NextAuth.js com sessões criptografadas. Middleware de proteção de rotas e validação de permissões (RBAC) granular no nível da API.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Funcionalidades */}
+            <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground pl-1 mt-8">Análise Funcional</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="border-l-4 border-l-purple-500 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <LucideShieldCheck className="w-4 h-4 text-purple-500" /> Painel Administrativo (Super Admin)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc list-outside ml-4 space-y-1 text-xs text-muted-foreground marker:text-purple-500">
+                    <li><b className="text-foreground">Gestão Global:</b> Controle total CRUD de Empresas, Setores e Funcionários.</li>
+                    <li><b className="text-foreground">Dashboard Analytics:</b> Métricas em tempo real de presença, distribuição por empresa e logs de atividade.</li>
+                    <li><b className="text-foreground">Controle de Usuários:</b> Criação de usuários (Educadores), definição de cargos e atribuição específica de quais empresas cada usuário pode acessar.</li>
+                    <li><b className="text-foreground">Gestão de Permissões:</b> Toggle granular para permitir que educadores cadastrem novos funcionários ou editem nomes.</li>
+                    <li><b className="text-foreground">Relatórios Auditáveis:</b> Histórico completo de chamadas.</li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <LucideUserCheck className="w-4 h-4 text-emerald-500" /> Portal do Educador
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc list-outside ml-4 space-y-1 text-xs text-muted-foreground marker:text-emerald-500">
+                    <li><b className="text-foreground">Fluxo Otimizado:</b> UX guiada em 3 passos (Empresa &rarr; Setor &rarr; Chamada) para máxima velocidade em sala.</li>
+                    <li><b className="text-foreground">Feedback Visual:</b> Indicadores claros de presença (verde) e seleção (azul), com suporte a micro-animações.</li>
+                    <li><b className="text-foreground">Acessibilidade:</b> Controles de tamanho de fonte dinâmicos e Dark Mode.</li>
+                    <li><b className="text-foreground">Edição Rápida:</b> Capacidade de remover presenças lançadas incorretamente e (se permitido) corrigir nomes e cadastrar novos alunos em lote.</li>
+                    <li><b className="text-foreground">Inteligente:</b> Detecção automática de duplicidade de presença no dia.</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex justify-center pt-8 pb-4 opacity-50">
+              <span className="text-[10px] uppercase font-black tracking-widest">Desenvolvido com ❤️ e Código Limpo</span>
+            </div>
+          </div>
+        );
       default:
         return (
           <Card className="border-none bg-card/40 flex flex-col items-center justify-center py-20">
@@ -1532,6 +1673,7 @@ export default function AdminClient() {
             {[
               { id: 'reports', label: 'Relatórios', icon: LucideFileText },
               { id: 'settings', label: 'Configurações', icon: LucideSettings },
+              { id: 'about', label: 'Sobre o Sistema', icon: LucideInfo },
             ].map((item) => (
               <button
                 key={item.id}
@@ -1596,6 +1738,7 @@ export default function AdminClient() {
                     {activeTab === 'users' && 'Controle de Acessos'}
                     {activeTab === 'reports' && 'Inteligência de Dados'}
                     {activeTab === 'settings' && 'Ajustes do Sistema'}
+                    {activeTab === 'about' && 'Informações do Sistema'}
                   </h1>
                   <p className="text-muted-foreground text-xs font-medium mt-1 hidden sm:block">Gerenciamento inteligente de presença e frequência.</p>
                 </div>
