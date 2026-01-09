@@ -25,7 +25,7 @@ export async function GET() {
       where: { usuario_id: Number(userId) },
       include: { empresa: true }
     });
-    const companies = mappings.map((m) => m.empresa.nome);
+    const companies = mappings.map((m) => m.empresa.nome).sort();
     return jsonResponse({ companies });
   } catch (err) {
     console.error(err);

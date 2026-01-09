@@ -85,7 +85,7 @@ export async function GET(req: Request) {
         empresa: true,
         setor: true
       },
-      orderBy: { id: 'asc' }
+      orderBy: { nome: 'asc' }
     });
 
     // Remap to match previous format if necessary (returning names as strings)

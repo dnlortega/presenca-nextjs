@@ -526,7 +526,7 @@ export default function EducatorClient() {
                               disabled={!!isAlreadyPresent}
                               onClick={() => toggleEmployee(emp.id)}
                               className={`w-full flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all text-left ${isAlreadyPresent
-                                ? 'bg-emerald-500/5 border-emerald-500/50 opacity-80 cursor-default'
+                                ? 'bg-emerald-500/20 border-emerald-500/50 cursor-default'
                                 : isSelected
                                   ? 'bg-primary/5 border-primary shadow-sm'
                                   : 'bg-card border-border hover:border-primary/30'
@@ -582,10 +582,10 @@ export default function EducatorClient() {
                               variant="ghost"
                               size="icon"
                               onClick={(e) => { e.stopPropagation(); deleteAttendance(isAlreadyPresent.id); }}
-                              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all"
+                              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full transition-all"
                               title="Remover presença"
                             >
-                              <LucideTrash2 className="w-4 h-4" />
+                              <LucideTrash2 className="w-5 h-5" />
                             </Button>
                           )}
                         </div>
