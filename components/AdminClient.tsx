@@ -205,7 +205,7 @@ export default function AdminClient() {
     setSearchTerm(''); // Clear search on tab change
     if (activeTab === 'overview') loadDashboard();
     if (activeTab === 'employees') { loadEmployees(); loadCompanies(); loadSectors(); }
-    if (activeTab === 'users') loadUsers();
+    if (activeTab === 'users') { loadUsers(); loadCompanies(); }
     if (activeTab === 'companies') { loadCompanies(); loadSectors(); }
     if (activeTab === 'sectors') { loadSectors(); loadCompanies(); }
     if (activeTab === 'reports') loadReports();
@@ -1339,9 +1339,11 @@ export default function AdminClient() {
                             <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => updateUserRole(u.id, 'admin')}>
                               ADMIN
                             </Button>
-                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => openUserCompModal(u)}>
-                              EMPRESAS
-                            </Button>
+                            {u.role === 'educador' && (
+                              <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => openUserCompModal(u)}>
+                                EMPRESAS
+                              </Button>
+                            )}
                             {u.role !== 'pendente' && (
                               <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-0 h-7 rounded-md text-muted-foreground hover:text-destructive" onClick={() => updateUserRole(u.id, 'pendente')}>
                                 BLOQUEAR
@@ -1392,9 +1394,16 @@ export default function AdminClient() {
                             <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-primary/20 text-primary hover:bg-primary/5 flex-1 min-w-[100px]" onClick={() => updateUserRole(u.id, 'admin')}>
                               ADMIN
                             </Button>
-                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-primary/20 text-primary hover:bg-primary/5 flex-1 min-w-[100px]" onClick={() => openUserCompModal(u)}>
-                              EMPRESAS
-                            </Button>
+                            {u.role === 'educador' && (
+                              <>
+                                <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 flex-1 min-w-[100px]" onClick={() => openAccessModal(u)}>
+                                  ACESSOS
+                                </Button>
+                                <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-primary/20 text-primary hover:bg-primary/5 flex-1 min-w-[100px]" onClick={() => openUserCompModal(u)}>
+                                  EMPRESAS
+                                </Button>
+                              </>
+                            )}
                             {u.role !== 'pendente' && (
                               <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md text-muted-foreground hover:text-destructive w-full" onClick={() => updateUserRole(u.id, 'pendente')}>
                                 BLOQUEAR
