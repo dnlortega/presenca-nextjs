@@ -24,8 +24,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         });
 
         return jsonResponse(sector);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
+        if (err.code === 'P2002') {
+            return jsonResponse({ error: 'Já existe um setor com este nome nesta empresa.' }, { status: 400 });
+        }
         return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }

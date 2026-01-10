@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         // Check for bulk creation first
         if (body.nomes && Array.isArray(body.nomes)) {
             const nomes: string[] = body.nomes.map((n: string) => n.trim()).filter((n: string) => n.length > 0);
-            
+
             if (nomes.length === 0) {
                 return jsonResponse({ error: 'Nenhum nome de setor válido fornecido' }, { status: 400 });
             }
@@ -71,8 +71,8 @@ export async function POST(req: Request) {
                 });
             }
 
-            return jsonResponse({ 
-                created: uniqueNewNomes.length, 
+            return jsonResponse({
+                created: uniqueNewNomes.length,
                 duplicates: nomes.length - uniqueNewNomes.length,
                 message: `${uniqueNewNomes.length} setores criados, ${nomes.length - uniqueNewNomes.length} ignorados.`
             });
@@ -92,8 +92,11 @@ export async function POST(req: Request) {
         });
 
         return jsonResponse(sector);
-    } catch (err) {
+    } catch (err: any) {
         console.error(err);
+        if (err.code === 'P2002') {
+            return jsonResponse({ error: 'Já existe um setor com este nome nesta empresa.' }, { status: 400 });
+        }
         return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }

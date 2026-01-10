@@ -11,6 +11,7 @@ import {
   LucideEdit,
   LucideTrash,
   LucideChevronRight,
+  LucideChevronDown,
   LucideSearch,
   LucideShieldCheck,
   LucideUserCheck,
@@ -23,7 +24,6 @@ import {
   LucideLayers,
   LucideAlertCircle,
   LucideX,
-
   LucideMenu,
   LucideInfo,
   LucideCode2,
@@ -40,6 +40,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { ModeToggle } from "./ModeToggle";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { fetchNoCache } from "../lib/fetch-helpers";
 import CompanyDistributionChart from "./CompanyDistributionChart";
 
@@ -103,12 +104,76 @@ type ReportRecord = {
   data_hora: string;
 };
 
+// Reusable Confirmation Popover
+function ConfirmAction({
+  onConfirm,
+  title = "Confirmar ação?",
+  description = "Esta ação não pode ser desfeita.",
+  children,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  buttonVariant = "destructive"
+}: {
+  onConfirm: () => void;
+  title?: string;
+  description?: string;
+  children: React.ReactNode;
+  confirmText?: string;
+  cancelText?: string;
+  buttonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        {children}
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-4 shadow-xl border-border bg-card/95 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h4 className="font-black uppercase tracking-tighter text-sm flex items-center gap-2">
+              <LucideAlertCircle className="w-4 h-4 text-destructive" />
+              {title}
+            </h4>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest leading-relaxed">
+              {description}
+            </p>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-[10px] font-black uppercase tracking-widest h-8"
+              onClick={() => setOpen(false)}
+            >
+              {cancelText}
+            </Button>
+            <Button
+              size="sm"
+              variant={buttonVariant}
+              className="text-[10px] font-black uppercase tracking-widest h-8 px-4"
+              onClick={() => {
+                onConfirm();
+                setOpen(false);
+              }}
+            >
+              {confirmText}
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function AdminClient() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [expandedCompanies, setExpandedCompanies] = useState<Record<string, boolean>>({}); // State for toggle
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -137,10 +202,11 @@ export default function AdminClient() {
   const [accessForm, setAccessForm] = useState({ can_register: false, can_edit: false });
 
   useEffect(() => {
+    setSearchTerm(''); // Clear search on tab change
     if (activeTab === 'overview') loadDashboard();
     if (activeTab === 'employees') { loadEmployees(); loadCompanies(); loadSectors(); }
     if (activeTab === 'users') loadUsers();
-    if (activeTab === 'companies') loadCompanies();
+    if (activeTab === 'companies') { loadCompanies(); loadSectors(); }
     if (activeTab === 'sectors') { loadSectors(); loadCompanies(); }
     if (activeTab === 'reports') loadReports();
   }, [activeTab]);
@@ -185,10 +251,17 @@ export default function AdminClient() {
 
   const loadCompanies = async () => {
     try {
+      console.log('Loading companies...');
       const res = await fetchNoCache('/api/admin/companies');
       const data = await res.json();
-      if (Array.isArray(data)) setCompanies(data);
-    } catch (e) { console.error(e); }
+      console.log('Companies loaded:', data);
+
+      if (Array.isArray(data)) {
+        setCompanies(data);
+      } else {
+        console.error('Invalid companies data:', data);
+      }
+    } catch (e) { console.error('Error loading companies:', e); }
   };
 
   const loadReports = async () => {
@@ -212,10 +285,6 @@ export default function AdminClient() {
   };
 
   const seedEmployees = async () => {
-    if (!confirm('Deseja criar 20 funcionários em cada setor cadastrado? Esta ação pode demorar alguns segundos.')) {
-      return;
-    }
-
     setIsSeedingEmployees(true);
     try {
       const res = await fetchNoCache('/api/admin/seed-employees', { method: 'POST' });
@@ -325,6 +394,13 @@ export default function AdminClient() {
     } catch (e) { console.error(e); }
   };
 
+  const toggleCompany = (companyName: string) => {
+    setExpandedCompanies(prev => ({
+      ...prev,
+      [companyName]: !prev[companyName]
+    }));
+  };
+
   const toggleUserCompany = (companyName: string) => {
     setUserCompForm(prev =>
       prev.includes(companyName)
@@ -361,7 +437,6 @@ export default function AdminClient() {
   };
 
   const handleDeleteEmployee = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir?')) return;
     try {
       const res = await fetchNoCache(`/api/admin/employees/${id}`, { method: 'DELETE' });
       if (res.ok) loadEmployees();
@@ -394,7 +469,6 @@ export default function AdminClient() {
   };
 
   const handleDeleteCompany = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir?')) return;
     try {
       const res = await fetchNoCache(`/api/admin/companies/${id}`, { method: 'DELETE' });
       if (res.ok) loadCompanies();
@@ -513,7 +587,6 @@ export default function AdminClient() {
   };
 
   const handleDeleteSector = async (id: number) => {
-    if (!confirm('Tem certeza que deseja excluir este setor?')) return;
     try {
       const res = await fetchNoCache(`/api/admin/sectors/${id}`, { method: 'DELETE' });
       if (res.ok) loadSectors();
@@ -622,7 +695,9 @@ export default function AdminClient() {
                 </CardHeader>
                 <CardContent>
                   {dashboardData?.companyDistribution ? (
-                    <CompanyDistributionChart data={dashboardData.companyDistribution} />
+                    <div className="w-full h-[300px]">
+                      <CompanyDistributionChart data={dashboardData.companyDistribution} />
+                    </div>
                   ) : (
                     <div className="h-64 w-full bg-muted/20 rounded-xl animate-shimmer relative overflow-hidden flex items-center justify-center">
                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Carregando métricas...</div>
@@ -781,13 +856,14 @@ export default function AdminClient() {
                                                 >
                                                   <LucideEdit className="w-3 h-3" />
                                                 </button>
-                                                <button
-                                                  onClick={() => handleDeleteSector(s.id)}
-                                                  className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
-                                                  title="Excluir Setor"
-                                                >
-                                                  <LucideTrash className="w-3 h-3" />
-                                                </button>
+                                                <ConfirmAction onConfirm={() => handleDeleteSector(s.id)} title="Excluir Setor?">
+                                                  <button
+                                                    className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
+                                                    title="Excluir Setor"
+                                                  >
+                                                    <LucideTrash className="w-3 h-3" />
+                                                  </button>
+                                                </ConfirmAction>
                                               </div>
                                             </td>
                                           </tr>
@@ -808,9 +884,11 @@ export default function AdminClient() {
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-lg" onClick={() => openCompModal(comp)}>
                                   <LucideEdit className="w-3.5 h-3.5" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg" onClick={() => handleDeleteCompany(comp.id)}>
-                                  <LucideTrash className="w-3.5 h-3.5" />
-                                </Button>
+                                <ConfirmAction onConfirm={() => handleDeleteCompany(comp.id)} title="Excluir Empresa?">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg">
+                                    <LucideTrash className="w-3.5 h-3.5" />
+                                  </Button>
+                                </ConfirmAction>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -856,9 +934,11 @@ export default function AdminClient() {
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openCompModal(comp)}>
                                   <LucideEdit className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteCompany(comp.id)}>
-                                  <LucideTrash className="w-4 h-4" />
-                                </Button>
+                                <ConfirmAction onConfirm={() => handleDeleteCompany(comp.id)} title="Excluir Empresa?">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                    <LucideTrash className="w-4 h-4" />
+                                  </Button>
+                                </ConfirmAction>
                               </div>
                             </div>
                           </CardHeader>
@@ -891,13 +971,14 @@ export default function AdminClient() {
                                       >
                                         <LucideEdit className="w-3 h-3" />
                                       </button>
-                                      <button
-                                        onClick={() => handleDeleteSector(s.id)}
-                                        className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
-                                        title="Excluir Setor"
-                                      >
-                                        <LucideTrash className="w-3 h-3" />
-                                      </button>
+                                      <ConfirmAction onConfirm={() => handleDeleteSector(s.id)} title="Excluir Setor?">
+                                        <button
+                                          className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
+                                          title="Excluir Setor"
+                                        >
+                                          <LucideTrash className="w-3 h-3" />
+                                        </button>
+                                      </ConfirmAction>
                                     </div>
                                   </div>
                                 ))}
@@ -970,9 +1051,11 @@ export default function AdminClient() {
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openSectorModal(sec)}>
                                   <LucideEdit className="w-3 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteSector(sec.id)}>
-                                  <LucideTrash className="w-3 h-4" />
-                                </Button>
+                                <ConfirmAction onConfirm={() => handleDeleteSector(sec.id)} title="Excluir Setor?">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                    <LucideTrash className="w-3 h-4" />
+                                  </Button>
+                                </ConfirmAction>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -994,9 +1077,11 @@ export default function AdminClient() {
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openSectorModal(sec)}>
                                   <LucideEdit className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteSector(sec.id)}>
-                                  <LucideTrash className="w-4 h-4" />
-                                </Button>
+                                <ConfirmAction onConfirm={() => handleDeleteSector(sec.id)} title="Excluir Setor?">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                    <LucideTrash className="w-4 h-4" />
+                                  </Button>
+                                </ConfirmAction>
                               </div>
                             </div>
                           </CardContent>
@@ -1026,117 +1111,152 @@ export default function AdminClient() {
             </div>
           );
         }
+
+        // Group Filtering Logic
+        const groupedEmployees: Record<string, Record<string, Employee[]>> = {};
+
+        filteredEmployees.forEach(emp => {
+          const companyName = typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || 'Sem Empresa');
+          const sectorName = typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || 'Sem Setor');
+
+          if (!groupedEmployees[companyName]) {
+            groupedEmployees[companyName] = {};
+          }
+          if (!groupedEmployees[companyName][sectorName]) {
+            groupedEmployees[companyName][sectorName] = [];
+          }
+          groupedEmployees[companyName][sectorName].push(emp);
+        });
+
+        // Sort keys for consistent display
+        const companyNames = Object.keys(groupedEmployees).sort();
+
         return (
-          <div className="page-transition space-y-4">
+          <div className="page-transition space-y-6">
             <Card className="border-none shadow-sm">
               <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle className="text-base sm:text-lg">Funcionários</CardTitle>
-                  <CardDescription className="text-xs">{employees.length} registros ativos</CardDescription>
+                  <CardDescription className="text-xs">{employees.length} registros ativos - Agrupados por Empresa e Setor</CardDescription>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <div className="relative w-full sm:w-auto">
                     <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
-                      placeholder="Buscar..."
+                      placeholder="Buscar por nome, setor ou empresa..."
                       className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-2 text-xs focus:ring-1 focus:ring-primary w-full sm:w-48 transition-all"
                       value={searchTerm}
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={seedEmployees}
-                    className="font-bold rounded-lg px-4 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
-                    disabled={isSeedingEmployees || sectors.length === 0}
+                  <ConfirmAction
+                    onConfirm={seedEmployees}
+                    title="Popular Base?"
+                    description="Deseja criar 15 funcionários em cada setor? Esta ação pode demorar alguns segundos."
+                    confirmText="Criar"
+                    buttonVariant="default"
                   >
-                    {isSeedingEmployees ? (
-                      <>
-                        <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-1" />
-                        Criando...
-                      </>
-                    ) : (
-                      <>
-                        <LucideUsers className="w-4 h-4 mr-1" /> Popular (15 por setor)
-                      </>
-                    )}
-                  </Button>
+                    <Button
+                      size="sm"
+                      className="font-bold rounded-lg px-4 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+                      disabled={isSeedingEmployees || sectors.length === 0}
+                    >
+                      {isSeedingEmployees ? (
+                        <>
+                          <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-1" />
+                          Criando...
+                        </>
+                      ) : (
+                        <>
+                          <LucideUsers className="w-4 h-4 mr-1" /> Popular (15 por setor)
+                        </>
+                      )}
+                    </Button>
+                  </ConfirmAction>
                   <Button size="sm" onClick={() => openEmpModal()} className="font-bold rounded-lg px-4 w-full sm:w-auto" disabled={sectors.length === 0}>
                     <LucidePlus className="w-4 h-4 mr-1" /> Novo
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                {/* Desktop Table View */}
-                <div className="hidden md:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent border-muted/50">
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nome</TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</TableHead>
-                        <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Setor</TableHead>
-                        <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEmployees.map((emp) => (
-                        <TableRow key={emp.id} className="border-muted/30 group">
-                          <TableCell className="py-3 font-bold">{emp.nome || '-'}</TableCell>
-                          <TableCell className="text-muted-foreground text-xs">
-                            {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || '-')}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
-                              {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || '-')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEmpModal(emp)}>
-                              <LucideEdit className="w-3 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteEmployee(emp.id)}>
-                              <LucideTrash className="w-3 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+              <CardContent className="space-y-8">
+                {companyNames.map(compName => {
+                  const sectorsInCompany = groupedEmployees[compName];
+                  const sectorNames = Object.keys(sectorsInCompany).sort();
+                  const isExpanded = expandedCompanies[compName];
 
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-3">
-                  {filteredEmployees.map((emp) => (
-                    <Card key={emp.id} className="border border-border/50">
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <CardTitle className="text-sm font-bold mb-1">{emp.nome || '-'}</CardTitle>
-                              <div className="space-y-1">
-                                <CardDescription className="text-xs">
-                                  {typeof emp.empresa === 'string' ? emp.empresa : (emp.empresa?.nome || '-')}
-                                </CardDescription>
-                                <Badge variant="secondary" className="text-[10px] font-bold rounded-md bg-muted/60">
-                                  {typeof emp.setor === 'string' ? emp.setor : (emp.setor?.nome || '-')}
-                                </Badge>
+                  return (
+                    <div key={compName} className="space-y-3 animate-in fade-in slide-in-from-left-2 duration-500">
+                      <div
+                        className="flex items-center gap-2 pb-2 border-b border-border/50 cursor-pointer hover:bg-muted/30 p-2 rounded-lg transition-colors"
+                        onClick={() => toggleCompany(compName)}
+                      >
+                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary transition-transform duration-200">
+                          {isExpanded ? <LucideChevronDown className="w-4 h-4" /> : <LucideChevronRight className="w-4 h-4" />}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <LucideBuilding className="w-4 h-4 text-muted-foreground" />
+                          <h3 className="text-sm font-black uppercase tracking-wider text-muted-foreground">{compName}</h3>
+                        </div>
+                        <Badge variant="secondary" className="ml-auto text-[10px] font-bold">
+                          {Object.values(sectorsInCompany).reduce((acc, list) => acc + list.length, 0)} Funcionários
+                        </Badge>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-2 md:pl-4 animate-in slide-in-from-top-2 duration-300">
+                          {sectorNames.map(secName => (
+                            <div key={secName} className="flex flex-col border border-border/40 bg-card/50 rounded-xl overflow-hidden hover:border-primary/20 transition-colors">
+                              <div className="bg-muted/30 px-4 py-2 flex justify-between items-center border-b border-border/30">
+                                <span className="text-xs font-bold text-foreground">{secName}</span>
+                                <Badge variant="outline" className="text-[9px] h-5 px-1.5 bg-background/50 border-border/50">{sectorsInCompany[secName].length}</Badge>
+                              </div>
+                              <div className="max-h-[300px] overflow-y-auto p-2 custom-scrollbar space-y-1">
+                                {sectorsInCompany[secName].map(emp => (
+                                  <div key={emp.id} className="group flex items-center justify-between p-2 rounded-lg hover:bg-primary/5 transition-all text-sm">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div className="w-6 h-6 rounded bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground uppercase shrink-0">
+                                        {emp.nome.substring(0, 2)}
+                                      </div>
+                                      <span className="truncate text-xs font-medium group-hover:text-primary transition-colors cursor-default" title={emp.nome}>{emp.nome}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                        onClick={() => openEmpModal(emp)}
+                                        title="Editar"
+                                      >
+                                        <LucideEdit className="w-3 h-3" />
+                                      </Button>
+                                      <ConfirmAction onConfirm={() => handleDeleteEmployee(emp.id)} title="Excluir Funcionário?">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                          title="Excluir"
+                                        >
+                                          <LucideTrash className="w-3 h-3" />
+                                        </Button>
+                                      </ConfirmAction>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEmpModal(emp)}>
-                                <LucideEdit className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteEmployee(emp.id)}>
-                                <LucideTrash className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
+                          ))}
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {companyNames.length === 0 && (
+                  <div className="py-20 text-center">
+                    <p className="text-xs font-black text-muted-foreground uppercase tracking-widest opacity-50">Nenhum registro encontrado</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

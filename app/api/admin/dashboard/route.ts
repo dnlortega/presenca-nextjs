@@ -7,19 +7,36 @@ import { jsonResponse } from '../../../../lib/api-helpers';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-function getSaoPauloDate() {
+function getSaoPauloDayRange() {
     const now = new Date();
-    // For simple daily matching without TZ libs, we can just use the server time if configured correctly,
-    // or assume the input dates from frontend are adjusted.
-    // For now, let's just use standard new Date() and we can refine TZ later if needed.
-    return now;
-}
+    // Get date parts for Sao Paulo timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
 
-function getDayRange(date: Date) {
-    const start = new Date(date);
-    start.setUTCHours(0, 0, 0, 0);
+    // Format is MM/DD/YYYY
+    const parts = formatter.formatToParts(now);
+    const month = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    const year = parts.find(p => p.type === 'year')?.value;
+
+    if (!month || !day || !year) {
+        // Fallback for extreme edge cases
+        const utc = new Date();
+        utc.setUTCHours(0, 0, 0, 0);
+        const end = new Date(utc);
+        end.setDate(end.getDate() + 1);
+        return { start: utc, end };
+    }
+
+    // Create UTC date for 00:00:00 of that day
+    const start = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
+
     return { start, end };
 }
 
@@ -28,13 +45,12 @@ export async function GET() {
         const session = await getServerSession(authOptions as any);
         if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
-        const todayRef = getSaoPauloDate();
-        const { start: startToday, end: endToday } = getDayRange(todayRef);
+        const { start: startToday, end: endToday } = getSaoPauloDayRange();
 
         // Define range for the last 7 days for trend analysis
-        const sevenDaysAgo = new Date(todayRef);
+        const sevenDaysAgo = new Date(startToday);
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        const { start: startSevenDaysAgo } = getDayRange(sevenDaysAgo);
+        const startSevenDaysAgo = sevenDaysAgo; // reuse simpler logic if needed, but trend isn't main focus now
 
         // Parellelize all independent queries
         const [totalCount, activeSectorsRaw, dailyCounts, recentRaw] = await Promise.all([
