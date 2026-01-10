@@ -29,8 +29,10 @@ import {
   LucideCode2,
   LucideDatabase,
   LucideLock,
-  LucideZap
+  LucideZap,
+  LucideTrash2
 } from 'lucide-react';
+import { toast } from "sonner";
 import { useSession, signOut } from 'next-auth/react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -1096,7 +1098,7 @@ export default function AdminClient() {
           </div>
         );
       case 'employees':
-        if (companies.length === 0) {
+        if (companies.length === 0 && employees.length === 0) {
           return (
             <div className="py-20 text-center space-y-6 animate-scale-in">
               <div className="w-20 h-20 bg-primary/5 rounded-3xl flex items-center justify-center mx-auto border border-primary/10 shadow-inner">
@@ -1178,6 +1180,24 @@ export default function AdminClient() {
                   <Button size="sm" onClick={() => openEmpModal()} className="font-bold rounded-lg px-4 w-full sm:w-auto" disabled={sectors.length === 0}>
                     <LucidePlus className="w-4 h-4 mr-1" /> Novo
                   </Button>
+                  {employees.some(e => !e.setor_id || !e.empresa_id) && (
+                    <ConfirmAction
+                      onConfirm={async () => {
+                        const orphans = employees.filter(e => !e.setor_id || !e.empresa_id);
+                        for (const orphan of orphans) {
+                          await fetchNoCache(`/api/admin/employees/${orphan.id}`, { method: 'DELETE' });
+                        }
+                        loadEmployees();
+                        toast.success('Órfãos removidos com sucesso');
+                      }}
+                      title="Excluir Órfãos?"
+                      description="Isto removerá permanentemente todos os funcionários sem vínculo de empresa ou setor."
+                    >
+                      <Button size="sm" variant="outline" className="font-bold rounded-lg px-4 w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/5">
+                        <LucideTrash2 className="w-4 h-4 mr-1" /> Limpar Órfãos
+                      </Button>
+                    </ConfirmAction>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-8">
