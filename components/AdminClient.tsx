@@ -359,6 +359,7 @@ export default function AdminClient() {
   const openUserCompModal = (user: User) => {
     setSelectedUser(user);
     setUserCompForm(user.empresas || []);
+    loadCompanies(); // Extra assurance
     setIsUserCompModalOpen(true);
   };
 
