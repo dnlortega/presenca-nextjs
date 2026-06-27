@@ -4,6 +4,7 @@ import { NextAuthOptions } from 'next-auth';
 import bcrypt from 'bcryptjs';
 import prisma from './prisma';
 import { rateLimit } from './rate-limit';
+import { audit } from './audit';
 import type { Session } from 'next-auth';
 
 export const authOptions: NextAuthOptions = {
@@ -61,6 +62,46 @@ export const authOptions: NextAuthOptions = {
     pages: {
         signIn: '/login',
         error: '/login',
+    },
+    events: {
+        async signIn({ user, account }) {
+            try {
+                const dbUser = await prisma.usuarios.findFirst({
+                    where: {
+                        OR: [
+                            { email: user.email || undefined },
+                            { username: user.name || undefined }
+                        ]
+                    },
+                    select: { id: true }
+                });
+                await audit({
+                    usuario_id: dbUser?.id ?? null,
+                    action: 'LOGIN',
+                    entity: 'usuarios',
+                    entity_id: dbUser?.id ?? null,
+                    details: `Login via ${account?.provider ?? 'credentials'}`
+                });
+
+                // Limpar audit_log com mais de 30 dias
+                await prisma.audit_log.deleteMany({
+                    where: { created_at: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }
+                });
+            } catch { /* não quebrar o login */ }
+        },
+        async signOut({ token }) {
+            try {
+                if (token?.id) {
+                    await audit({
+                        usuario_id: token.id as number,
+                        action: 'LOGOUT',
+                        entity: 'usuarios',
+                        entity_id: token.id as number,
+                        details: 'Sessão encerrada'
+                    });
+                }
+            } catch { /* não quebrar o logout */ }
+        }
     },
     callbacks: {
         async signIn({ user, account }) {

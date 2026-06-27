@@ -2011,6 +2011,7 @@ export default function AdminClient() {
               const actionLabel: Record<string, string> = {
                 CREATE: 'Criou', UPDATE: 'Editou', DELETE: 'Excluiu',
                 UPDATE_ROLE: 'Alterou cargo', UPDATE_PERMISSION: 'Alterou permissão',
+                LOGIN: 'Login', LOGOUT: 'Logout', FORCE_LOGOUT: 'Sessão encerrada',
               };
               const entityLabel: Record<string, string> = {
                 funcionarios: 'Funcionário', empresas: 'Empresa', setores: 'Setor',
@@ -2022,6 +2023,9 @@ export default function AdminClient() {
                 DELETE: 'text-red-600 bg-red-50 dark:bg-red-950/30',
                 UPDATE_ROLE: 'text-purple-600 bg-purple-50 dark:bg-purple-950/30',
                 UPDATE_PERMISSION: 'text-orange-600 bg-orange-50 dark:bg-orange-950/30',
+                LOGIN: 'text-teal-600 bg-teal-50 dark:bg-teal-950/30',
+                LOGOUT: 'text-slate-600 bg-slate-100 dark:bg-slate-800/30',
+                FORCE_LOGOUT: 'text-red-700 bg-red-50 dark:bg-red-950/30',
               };
               return (
                 <Card className="border-none shadow-sm overflow-hidden bg-card/40 backdrop-blur-sm">
