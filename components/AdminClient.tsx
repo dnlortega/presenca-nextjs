@@ -40,7 +40,10 @@ import {
 import { toast } from "sonner";
 import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
+} from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
@@ -71,6 +74,11 @@ type DashboardData = {
   companyDistribution?: { name: string; value: number }[];
   weeklyTrend?: { date: string; count: number }[];
   recentActivities: RecentActivity[];
+  companyMonthly?: { name: string; count: number }[];
+  sectorDonut?: { name: string; value: number }[];
+  heatmapData?: { date: string; count: number }[];
+  hourlyDistribution?: { hour: string; count: number }[];
+  topAbsent?: { id: number; nome: string; empresa: string; setor: string; presencas: number }[];
 };
 
 type AuditEntry = {
@@ -694,205 +702,265 @@ export default function AdminClient() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'overview':
+      case 'overview': {
+        const PIE_COLORS = ['#6366f1','#22c55e','#f59e0b','#ec4899','#14b8a6','#8b5cf6','#f97316','#06b6d4'];
+        const shimmer = <div className="h-full w-full bg-muted/20 rounded-xl animate-shimmer" />;
+        const maxToday = Math.max(1, dashboardData?.totalToday ?? 1);
+        const attendanceRate = dashboardData && dashboardData.totalEmployees > 0
+          ? Math.round((dashboardData.totalToday / dashboardData.totalEmployees) * 100) : 0;
+
         return (
-          <div className="space-y-6 animate-scale-in">
+          <div className="flex flex-col gap-4 animate-scale-in h-full">
             {dashboardError && (
-              <Card className="border-destructive/50 bg-destructive/10">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 text-destructive text-sm">
-                    <LucideAlertCircle className="w-4 h-4" />
-                    <span>{dashboardError}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={loadDashboard}
-                      className="ml-auto text-xs"
-                    >
-                      Tentar novamente
-                    </Button>
-                  </div>
+              <Card className="border-destructive/50 bg-destructive/10 shrink-0">
+                <CardContent className="p-3 flex items-center gap-2 text-destructive text-xs">
+                  <LucideAlertCircle className="w-4 h-4" />
+                  <span>{dashboardError}</span>
+                  <Button size="sm" variant="ghost" onClick={loadDashboard} className="ml-auto text-xs h-7">Tentar novamente</Button>
                 </CardContent>
               </Card>
             )}
-            <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-black text-muted-foreground">Presenças hoje</CardTitle>
-                  <LucideUsers className="w-4 h-4 text-blue-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-black">
-                    {isLoadingDashboard ? <div className="h-8 w-16 bg-muted/20 animate-shimmer rounded" /> : dashboardData?.totalToday ?? 0}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Registradas hoje</p>
-                </CardContent>
-              </Card>
 
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-black text-muted-foreground">Taxa de presença</CardTitle>
-                  <LucidePercent className="w-4 h-4 text-emerald-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-black">
-                    {isLoadingDashboard ? <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" /> : (
-                      dashboardData && dashboardData.totalEmployees > 0
-                        ? `${Math.round((dashboardData.totalToday / dashboardData.totalEmployees) * 100)}%`
-                        : '—'
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {isLoadingDashboard ? '' : `${dashboardData?.totalToday ?? 0} de ${dashboardData?.totalEmployees ?? 0} funcionários`}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-black text-muted-foreground">Setores ativos</CardTitle>
-                  <LucideBarChart className="w-4 h-4 text-indigo-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-black">
-                    {isLoadingDashboard ? <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" /> : dashboardData?.sectorsActive ?? 0}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Com presença hoje</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-black text-muted-foreground">Total de funcionários</CardTitle>
-                  <LucideUsers className="w-4 h-4 text-purple-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-black">
-                    {isLoadingDashboard ? <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" /> : dashboardData?.totalEmployees ?? 0}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Cadastrados no sistema</p>
-                </CardContent>
-              </Card>
+            {/* KPI Cards */}
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+              {[
+                { label: 'Presenças hoje', value: dashboardData?.totalToday ?? 0, sub: 'registradas hoje', icon: LucideUsers, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                { label: 'Taxa de presença', value: isLoadingDashboard ? '—' : `${attendanceRate}%`, sub: `${dashboardData?.totalToday ?? 0} de ${dashboardData?.totalEmployees ?? 0}`, icon: LucidePercent, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { label: 'Setores ativos', value: dashboardData?.sectorsActive ?? 0, sub: 'com presença hoje', icon: LucideBarChart, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                { label: 'Funcionários', value: dashboardData?.totalEmployees ?? 0, sub: 'cadastrados', icon: LucideUsers, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+              ].map(({ label, value, sub, icon: Icon, color, bg }) => (
+                <Card key={label} className="border-none shadow-sm">
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between mb-1.5">
+                      <p className="text-[10px] font-medium text-muted-foreground leading-tight">{label}</p>
+                      <div className={`p-1 rounded-lg ${bg} shrink-0`}><Icon className={`w-3 h-3 ${color}`} /></div>
+                    </div>
+                    <div className="text-xl font-bold tracking-tight">
+                      {isLoadingDashboard ? <div className="h-6 w-12 bg-muted/20 animate-shimmer rounded" /> : value}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>
+                  </CardContent>
+                </Card>
+              ))}
             </section>
 
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-2 border-none shadow-sm">
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">Distribuição por Empresa</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {dashboardData?.companyDistribution ? (
-                    <div className="w-full h-[300px]">
-                      <CompanyDistributionChart data={dashboardData.companyDistribution} />
-                    </div>
-                  ) : (
-                    <div className="h-64 w-full bg-muted/20 rounded-xl animate-shimmer relative overflow-hidden flex items-center justify-center">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Carregando métricas...</div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            {/* Abas de análise */}
+            <Tabs defaultValue="hoje" className="flex-1 flex flex-col min-h-0">
+              <TabsList className="shrink-0 w-fit mb-3 h-8">
+                <TabsTrigger value="hoje" className="text-xs px-4 h-7">Hoje</TabsTrigger>
+                <TabsTrigger value="tendencia" className="text-xs px-4 h-7">7 dias</TabsTrigger>
+                <TabsTrigger value="mensal" className="text-xs px-4 h-7">30 dias</TabsTrigger>
+              </TabsList>
 
-              <Card className="border-none shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg">Atividade Recente</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {dashboardData?.recentActivities && dashboardData.recentActivities.length > 0 ? (
-                    dashboardData.recentActivities.map((activity) => (
-                      <div key={activity.id} className="flex gap-3 group">
-                        <div className="w-1 bg-primary/20 rounded-full group-hover:bg-primary transition-colors" />
-                        <div className="flex-1">
-                          <div className="text-xs font-bold">
-                            {activity.funcionario}
-                          </div>
-                          <div className="text-[10px] font-medium text-muted-foreground">
-                            {activity.setor} • {activity.empresa}
-                          </div>
-                        </div>
+              {/* Aba: Hoje */}
+              <TabsContent value="hoje" className="mt-0 flex-1 min-h-0">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+                  {/* Horário de pico */}
+                  <Card className="lg:col-span-2 border-none shadow-sm">
+                    <CardHeader className="py-3 px-4">
+                      <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                        <LucideClock className="w-3.5 h-3.5 text-amber-500" /> Horário de pico
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="h-[180px]">
+                        {dashboardData?.hourlyDistribution ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dashboardData.hourlyDistribution} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                              <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+                              <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
+                              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} opacity={0.85} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : <div className="h-[180px]">{shimmer}</div>}
                       </div>
-                    ))
-                  ) : (
-                    <div className="py-8 text-center text-muted-foreground text-xs italic">
-                      Nenhuma atividade.
-                    </div>
-                  )}
-                  <Button variant="ghost" className="w-full text-xs font-bold text-primary" onClick={() => setActiveTab('reports')}>
-                    Ver histórico <LucideChevronRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              <Card className="border-none shadow-sm lg:col-span-3">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base font-black flex items-center gap-2">
-                      <LucideTrendingUp className="w-4 h-4 text-primary" /> Tendência semanal
+                  {/* Setores hoje + Recente */}
+                  <div className="flex flex-col gap-3">
+                    <Card className="border-none shadow-sm flex-1">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-xs font-semibold">Setores hoje</CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-3 space-y-2 overflow-y-auto max-h-[160px] custom-scrollbar">
+                        {dashboardData?.sectorStats?.length ? dashboardData.sectorStats.map((stat, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between text-[10px] mb-0.5">
+                                <span className="font-medium truncate">{stat.setor}</span>
+                                <span className="font-bold text-primary ml-1 shrink-0">{stat.count}</span>
+                              </div>
+                              <div className="w-full bg-muted/40 h-1 rounded-full overflow-hidden">
+                                <div className="bg-primary h-full rounded-full" style={{ width: `${Math.min((stat.count / maxToday) * 100, 100)}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        )) : (
+                          <p className="text-[10px] text-muted-foreground italic py-4 text-center">Nenhuma presença hoje.</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card className="border-none shadow-sm flex-1">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-xs font-semibold">Recente</CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-3 space-y-2 overflow-y-auto max-h-[140px] custom-scrollbar">
+                        {dashboardData?.recentActivities?.length ? dashboardData.recentActivities.map((a) => (
+                          <div key={a.id} className="flex gap-2">
+                            <div className="w-0.5 bg-primary/30 rounded-full shrink-0" />
+                            <div>
+                              <p className="text-[10px] font-semibold leading-tight">{a.funcionario}</p>
+                              <p className="text-[9px] text-muted-foreground">{a.setor}</p>
+                            </div>
+                          </div>
+                        )) : <p className="text-[10px] text-muted-foreground italic text-center py-2">Sem atividade.</p>}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Aba: 7 dias */}
+              <TabsContent value="tendencia" className="mt-0 flex-1 min-h-0">
+                <Card className="border-none shadow-sm h-full">
+                  <CardHeader className="py-3 px-4">
+                    <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                      <LucideTrendingUp className="w-3.5 h-3.5 text-primary" /> Tendência dos últimos 7 dias
                     </CardTitle>
-                    <CardDescription className="text-xs">Presenças registradas nos últimos 7 dias.</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {dashboardData?.weeklyTrend ? (
-                    <div className="h-[180px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={dashboardData.weeklyTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
-                          <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 700 }} tickLine={false} axisLine={false} />
-                          <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                          <Tooltip
-                            contentStyle={{ fontSize: 11, fontWeight: 700, borderRadius: 8, border: '1px solid hsl(var(--border))' }}
-                            labelStyle={{ fontWeight: 900, textTransform: 'capitalize' }}
-                            formatter={(v) => [typeof v === 'number' ? v : 0, 'Presenças']}
-                          />
-                          <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3, fill: 'hsl(var(--primary))' }} activeDot={{ r: 5 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <div className="h-[300px]">
+                      {dashboardData?.weeklyTrend ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={dashboardData.weeklyTrend} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+                            <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [typeof v === 'number' ? v : 0, 'Presenças']} />
+                            <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : <div className="h-[300px]">{shimmer}</div>}
                     </div>
-                  ) : (
-                    <div className="h-[180px] w-full bg-muted/20 rounded-xl animate-shimmer" />
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-              <Card className="border-none shadow-sm lg:col-span-3">
-                <CardHeader>
-                  <CardTitle className="text-base font-black">Setores com presença hoje</CardTitle>
-                  <CardDescription className="text-xs">Acompanhamento por setor e quantidade de registros.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {dashboardData?.sectorStats && dashboardData.sectorStats.length > 0 ? (
-                      dashboardData.sectorStats.map((stat, idx) => (
-                        <div key={idx} className="flex flex-col p-4 rounded-2xl bg-muted/30 border border-border/50 hover-lift transition-all">
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline" className="text-[10px] font-black border-primary/20 text-primary bg-primary/5">
-                              {stat.empresa}
-                            </Badge>
-                            <span className="text-lg font-black text-primary">{stat.count}</span>
-                          </div>
-                          <span className="text-sm font-bold truncate">{stat.setor}</span>
-                          <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
-                            <div
-                              className="bg-primary h-full rounded-full transition-all duration-1000"
-                              style={{ width: `${Math.min((stat.count / (dashboardData.totalToday || 1)) * 100, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="col-span-full py-10 text-center text-muted-foreground text-xs italic bg-muted/10 rounded-2xl border border-dashed">
-                        Nenhuma presença registrada hoje.
+              {/* Aba: 30 dias */}
+              <TabsContent value="mensal" className="mt-0 flex-1 min-h-0">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+                  {/* Barras por empresa */}
+                  <Card className="lg:col-span-2 border-none shadow-sm">
+                    <CardHeader className="py-3 px-4">
+                      <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                        <LucideBuilding className="w-3.5 h-3.5 text-indigo-500" /> Por empresa
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="h-[160px]">
+                        {dashboardData?.companyMonthly?.length ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dashboardData.companyMonthly} layout="vertical" margin={{ top: 0, right: 16, left: 4, bottom: 0 }}>
+                              <XAxis type="number" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                              <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={90} />
+                              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
+                              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} opacity={0.85} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : <p className="text-xs text-muted-foreground italic text-center pt-12">Sem dados</p>}
                       </div>
-                    )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Coluna direita: donut + ausências + heatmap */}
+                  <div className="flex flex-col gap-3">
+                    <Card className="border-none shadow-sm flex-1">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                          <LucideLayers className="w-3.5 h-3.5 text-rose-500" /> Setores
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-3">
+                        <div className="h-[130px]">
+                          {dashboardData?.sectorDonut?.length ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie data={dashboardData.sectorDonut} cx="50%" cy="50%" innerRadius={30} outerRadius={52} dataKey="value" paddingAngle={2}>
+                                  {dashboardData.sectorDonut.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} opacity={0.9} />)}
+                                </Pie>
+                                <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
+                                <Legend iconSize={7} wrapperStyle={{ fontSize: 9 }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          ) : <p className="text-xs text-muted-foreground italic text-center pt-8">Sem dados</p>}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-none shadow-sm flex-1">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                          <LucideAlertCircle className="w-3.5 h-3.5 text-rose-500" /> Menos presenças
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-3 space-y-1.5">
+                        {dashboardData?.topAbsent?.length ? dashboardData.topAbsent.map((e, i) => (
+                          <div key={e.id} className="flex items-center gap-2">
+                            <span className="text-[9px] font-bold text-muted-foreground w-3">{i + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-semibold truncate leading-tight">{e.nome}</p>
+                              <p className="text-[9px] text-muted-foreground truncate">{e.setor}</p>
+                            </div>
+                            <Badge variant="outline" className="text-[9px] font-bold h-4 px-1 shrink-0">{e.presencas}d</Badge>
+                          </div>
+                        )) : <p className="text-[10px] text-muted-foreground italic text-center py-2">Sem dados</p>}
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
-            </section>
+
+                  {/* Heat map — linha inteira */}
+                  <Card className="lg:col-span-3 border-none shadow-sm">
+                    <CardHeader className="py-3 px-4">
+                      <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                        <LucideBarChart className="w-3.5 h-3.5 text-teal-500" /> Mapa de presença
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      {dashboardData?.heatmapData ? (() => {
+                        const max = Math.max(1, ...dashboardData.heatmapData.map(d => d.count));
+                        return (
+                          <div className="flex flex-wrap gap-1 items-center">
+                            {dashboardData.heatmapData.map(({ date, count }) => {
+                              const d = new Date(date + 'T12:00:00');
+                              const label = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+                              const intensity = count === 0 ? 0 : Math.max(0.15, count / max);
+                              return (
+                                <div key={date} title={`${label}: ${count} presenças`}
+                                  className="w-6 h-6 rounded cursor-default border border-border/20"
+                                  style={{ backgroundColor: count === 0 ? 'hsl(var(--muted))' : `hsl(var(--primary) / ${intensity})` }}
+                                />
+                              );
+                            })}
+                            <div className="w-full flex items-center gap-1.5 mt-2 text-[9px] text-muted-foreground">
+                              <span>Menos</span>
+                              {[0.1, 0.3, 0.55, 0.8, 1].map(v => (
+                                <div key={v} className="w-3.5 h-3.5 rounded" style={{ backgroundColor: v < 0.1 ? 'hsl(var(--muted))' : `hsl(var(--primary) / ${v})` }} />
+                              ))}
+                              <span>Mais</span>
+                            </div>
+                          </div>
+                        );
+                      })() : shimmer}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         );
+      }
       case 'companies':
         return (
           <div className="page-transition space-y-4">
