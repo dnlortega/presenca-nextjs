@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   LucideUsers,
   LucideBarChart,
@@ -27,13 +27,20 @@ import {
   LucideMenu,
   LucideInfo,
   LucideCode2,
-  LucideDatabase,
-  LucideLock,
   LucideZap,
-  LucideTrash2
+  LucideTrash2,
+  LucideTrendingUp,
+  LucideClipboardList,
+  LucideFilter,
+  LucidePercent,
+  LucideSun,
+  LucideMoon,
+  LucideMonitor
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSession, signOut } from 'next-auth/react';
+import { useTheme } from 'next-themes';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
@@ -41,12 +48,12 @@ import { Badge } from "./ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { ModeToggle } from "./ModeToggle";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { fetchNoCache } from "../lib/fetch-helpers";
 import CompanyDistributionChart from "./CompanyDistributionChart";
 
-type Tab = 'overview' | 'companies' | 'sectors' | 'employees' | 'users' | 'reports' | 'settings' | 'about';
+type Tab = 'overview' | 'companies' | 'sectors' | 'employees' | 'users' | 'reports' | 'audit' | 'settings' | 'about';
 
 type RecentActivity = {
   id: number;
@@ -58,10 +65,22 @@ type RecentActivity = {
 
 type DashboardData = {
   totalToday: number;
+  totalEmployees: number;
   sectorsActive: number;
   sectorStats?: { setor: string; empresa: string; count: number }[];
   companyDistribution?: { name: string; value: number }[];
+  weeklyTrend?: { date: string; count: number }[];
   recentActivities: RecentActivity[];
+};
+
+type AuditEntry = {
+  id: number;
+  username: string;
+  action: string;
+  entity: string;
+  entity_id: number | null;
+  details: string | null;
+  created_at: string;
 };
 
 type Employee = {
@@ -171,6 +190,7 @@ function ConfirmAction({
 
 export default function AdminClient() {
   const { data: session } = useSession();
+  const { setTheme, theme } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -181,6 +201,7 @@ export default function AdminClient() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [reports, setReports] = useState<ReportRecord[]>([]);
+  const [reportsTotal, setReportsTotal] = useState(0);
   const [isLoadingReports, setIsLoadingReports] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
@@ -202,15 +223,25 @@ export default function AdminClient() {
   const [isSeedingEmployees, setIsSeedingEmployees] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [accessForm, setAccessForm] = useState({ can_register: false, can_edit: false });
+  const [navGroupOpen, setNavGroupOpen] = useState({ principal: true, sistema: true });
+  const [reportPage, setReportPage] = useState(1);
+  const [reportFilter, setReportFilter] = useState({ startDate: '', endDate: '', empresa: '', setor: '' });
+  const REPORTS_PER_PAGE = 20;
+  const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditPage, setAuditPage] = useState(1);
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+  const AUDIT_PER_PAGE = 20;
 
   useEffect(() => {
-    setSearchTerm(''); // Clear search on tab change
+    setSearchTerm('');
     if (activeTab === 'overview') loadDashboard();
     if (activeTab === 'employees') { loadEmployees(); loadCompanies(); loadSectors(); }
     if (activeTab === 'users') { loadUsers(); loadCompanies(); }
     if (activeTab === 'companies') { loadCompanies(); loadSectors(); }
     if (activeTab === 'sectors') { loadSectors(); loadCompanies(); }
-    if (activeTab === 'reports') loadReports();
+    if (activeTab === 'reports') loadReports(1);
+    if (activeTab === 'audit') loadAuditLogs(1);
   }, [activeTab]);
 
   const loadDashboard = async () => {
@@ -253,27 +284,43 @@ export default function AdminClient() {
 
   const loadCompanies = async () => {
     try {
-      console.log('Loading companies...');
       const res = await fetchNoCache('/api/admin/companies');
       const data = await res.json();
-      console.log('Companies loaded:', data);
-
-      if (Array.isArray(data)) {
-        setCompanies(data);
-      } else {
-        console.error('Invalid companies data:', data);
-      }
+      if (Array.isArray(data)) setCompanies(data);
     } catch (e) { console.error('Error loading companies:', e); }
   };
 
-  const loadReports = async () => {
+  const loadReports = async (page = 1, filter = reportFilter) => {
     setIsLoadingReports(true);
     try {
-      const res = await fetchNoCache('/api/admin/reports');
+      const params = new URLSearchParams({ page: String(page), limit: String(REPORTS_PER_PAGE) });
+      if (filter.startDate) params.set('startDate', filter.startDate);
+      if (filter.endDate) params.set('endDate', filter.endDate);
+      if (filter.empresa) params.set('empresa', filter.empresa);
+      if (filter.setor) params.set('setor', filter.setor);
+      const res = await fetchNoCache(`/api/admin/reports?${params}`);
       const data = await res.json();
-      if (res.ok) setReports(data);
+      if (res.ok) {
+        setReports(data.data);
+        setReportsTotal(data.total);
+        setReportPage(page);
+      }
     } catch (e) { console.error(e); }
     setIsLoadingReports(false);
+  };
+
+  const loadAuditLogs = async (page = 1) => {
+    setIsLoadingAudit(true);
+    try {
+      const res = await fetchNoCache(`/api/admin/audit-log?page=${page}&limit=${AUDIT_PER_PAGE}`);
+      const data = await res.json();
+      if (res.ok) {
+        setAuditLogs(data.data);
+        setAuditTotal(data.total);
+        setAuditPage(page);
+      }
+    } catch (e) { console.error(e); }
+    setIsLoadingAudit(false);
   };
 
   const loadSectors = async () => {
@@ -304,6 +351,29 @@ export default function AdminClient() {
     } finally {
       setIsSeedingEmployees(false);
     }
+  };
+
+  // Force logout detection: if admin terminates our own session somehow
+  useEffect(() => {
+    if (session?.user?.forceLogout) {
+      signOut({ callbackUrl: '/login' });
+    }
+  }, [session]);
+
+  const forceUserLogout = async (userId: number, username: string) => {
+    try {
+      const res = await fetchNoCache('/api/admin/users/force-logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        toast.success(`Sessão de ${username} encerrada`);
+      } else {
+        const data = await res.json() as { error?: string };
+        toast.error(data.error || 'Erro ao encerrar sessão');
+      }
+    } catch (e) { console.error(e); }
   };
 
   const updateUserRole = async (userId: number, newRole: string) => {
@@ -597,23 +667,29 @@ export default function AdminClient() {
     } catch (err) { console.error(err); }
   };
 
-  const filteredEmployees = employees.filter(emp => {
+  const term = searchTerm.toLowerCase();
+
+  const filteredEmployees = useMemo(() => employees.filter(emp => {
     const empresaNome = typeof emp.empresa === 'string' ? emp.empresa : emp.empresa?.nome || '';
     const setorNome = typeof emp.setor === 'string' ? emp.setor : emp.setor?.nome || '';
     return (
-      (emp.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      empresaNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      setorNome.toLowerCase().includes(searchTerm.toLowerCase())
+      (emp.nome || '').toLowerCase().includes(term) ||
+      empresaNome.toLowerCase().includes(term) ||
+      setorNome.toLowerCase().includes(term)
     );
-  });
+  }), [employees, term]);
 
-  const filteredCompanies = companies.filter(comp =>
-    (comp.nome || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCompanies = useMemo(() =>
+    companies.filter(comp => (comp.nome || '').toLowerCase().includes(term)),
+    [companies, term]
   );
 
-  const filteredSectors = sectors.filter(sec =>
-    (sec.nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (sec.empresa?.nome || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSectors = useMemo(() =>
+    sectors.filter(sec =>
+      (sec.nome || '').toLowerCase().includes(term) ||
+      (sec.empresa?.nome || '').toLowerCase().includes(term)
+    ),
+    [sectors, term]
   );
 
   const renderContent = () => {
@@ -639,52 +715,62 @@ export default function AdminClient() {
                 </CardContent>
               </Card>
             )}
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Total Hoje</CardTitle>
+                  <CardTitle className="text-xs font-black text-muted-foreground">Presenças hoje</CardTitle>
                   <LucideUsers className="w-4 h-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-black">
-                    {isLoadingDashboard ? (
-                      <div className="h-8 w-16 bg-muted/20 animate-shimmer rounded" />
-                    ) : (
-                      dashboardData?.totalToday ?? 0
-                    )}
+                    {isLoadingDashboard ? <div className="h-8 w-16 bg-muted/20 animate-shimmer rounded" /> : dashboardData?.totalToday ?? 0}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Presenças registradas hoje</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Registradas hoje</p>
                 </CardContent>
               </Card>
 
               <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Setores Ativos</CardTitle>
+                  <CardTitle className="text-xs font-black text-muted-foreground">Taxa de presença</CardTitle>
+                  <LucidePercent className="w-4 h-4 text-emerald-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-black">
+                    {isLoadingDashboard ? <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" /> : (
+                      dashboardData && dashboardData.totalEmployees > 0
+                        ? `${Math.round((dashboardData.totalToday / dashboardData.totalEmployees) * 100)}%`
+                        : '—'
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {isLoadingDashboard ? '' : `${dashboardData?.totalToday ?? 0} de ${dashboardData?.totalEmployees ?? 0} funcionários`}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xs font-black text-muted-foreground">Setores ativos</CardTitle>
                   <LucideBarChart className="w-4 h-4 text-indigo-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-black">
-                    {isLoadingDashboard ? (
-                      <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" />
-                    ) : (
-                      dashboardData?.sectorsActive ?? 0
-                    )}
+                    {isLoadingDashboard ? <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" /> : dashboardData?.sectorsActive ?? 0}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Com presença registrada hoje</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Com presença hoje</p>
                 </CardContent>
               </Card>
 
-              <Card
-                className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-pointer transition-all hover:bg-card/60"
-                onClick={() => setActiveTab('reports')}
-              >
+              <Card className="border-none shadow-sm bg-card/40 backdrop-blur-sm hover-lift cursor-default transition-all">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Relatórios</CardTitle>
-                  <LucideFileText className="w-4 h-4 text-purple-500" />
+                  <CardTitle className="text-xs font-black text-muted-foreground">Total de funcionários</CardTitle>
+                  <LucideUsers className="w-4 h-4 text-purple-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-black">Ver todos</div>
-                  <p className="text-[10px] text-muted-foreground mt-1">Clique para acessar o histórico</p>
+                  <div className="text-2xl font-black">
+                    {isLoadingDashboard ? <div className="h-8 w-12 bg-muted/20 animate-shimmer rounded" /> : dashboardData?.totalEmployees ?? 0}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">Cadastrados no sistema</p>
                 </CardContent>
               </Card>
             </section>
@@ -740,9 +826,41 @@ export default function AdminClient() {
               </Card>
 
               <Card className="border-none shadow-sm lg:col-span-3">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-black flex items-center gap-2">
+                      <LucideTrendingUp className="w-4 h-4 text-primary" /> Tendência semanal
+                    </CardTitle>
+                    <CardDescription className="text-xs">Presenças registradas nos últimos 7 dias.</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {dashboardData?.weeklyTrend ? (
+                    <div className="h-[180px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={dashboardData.weeklyTrend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 700 }} tickLine={false} axisLine={false} />
+                          <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{ fontSize: 11, fontWeight: 700, borderRadius: 8, border: '1px solid hsl(var(--border))' }}
+                            labelStyle={{ fontWeight: 900, textTransform: 'capitalize' }}
+                            formatter={(v) => [typeof v === 'number' ? v : 0, 'Presenças']}
+                          />
+                          <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3, fill: 'hsl(var(--primary))' }} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-[180px] w-full bg-muted/20 rounded-xl animate-shimmer" />
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm lg:col-span-3">
                 <CardHeader>
-                  <CardTitle className="text-lg">Setores com Presença (Hoje)</CardTitle>
-                  <CardDescription>Acompanhamento por setor e quantidade de registros.</CardDescription>
+                  <CardTitle className="text-base font-black">Setores com presença hoje</CardTitle>
+                  <CardDescription className="text-xs">Acompanhamento por setor e quantidade de registros.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1241,7 +1359,7 @@ export default function AdminClient() {
                                       </div>
                                       <span className="truncate text-xs font-medium group-hover:text-primary transition-colors cursor-default" title={emp.nome}>{emp.nome}</span>
                                     </div>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-1 opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                       <Button
                                         variant="ghost"
                                         size="icon"
@@ -1370,6 +1488,11 @@ export default function AdminClient() {
                                 BLOQUEAR
                               </Button>
                             )}
+                            {u.role !== 'admin' && (
+                              <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-0 h-7 rounded-md text-muted-foreground hover:text-destructive" onClick={() => forceUserLogout(u.id, u.username)}>
+                                <LucideLogOut className="w-3 h-3 mr-1" /> SESSÃO
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1442,16 +1565,94 @@ export default function AdminClient() {
         );
       case 'reports':
         return (
-          <div className="page-transition space-y-6">
+          <div className="page-transition space-y-4">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black uppercase tracking-tight">Histórico de Presença</h2>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">Dados detalhados dos registros efetuados.</p>
+                <h2 className="text-xl font-black">Histórico de presença</h2>
+                <p className="text-xs text-muted-foreground font-medium mt-1">Dados detalhados dos registros efetuados.</p>
               </div>
-              <Button onClick={loadReports} size="sm" variant="outline" className="h-10 rounded-xl font-black uppercase tracking-widest gap-2">
-                <LucideClock className="w-4 h-4" /> Atualizar Dados
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button onClick={() => loadReports(1)} size="sm" variant="outline" className="h-9 rounded-xl font-bold gap-2">
+                  <LucideClock className="w-4 h-4" /> Atualizar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 rounded-xl font-bold gap-2 border-green-500/30 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                  onClick={() => {
+                    const a = document.createElement('a');
+                    a.href = '/api/admin/reports/export';
+                    a.download = '';
+                    a.click();
+                  }}
+                >
+                  <LucideFileText className="w-4 h-4" /> Exportar CSV
+                </Button>
+              </div>
             </header>
+
+            {/* Filters */}
+            <Card className="border-none shadow-sm bg-card/40">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+                    <label className="text-[10px] font-black text-muted-foreground whitespace-nowrap">De</label>
+                    <input
+                      type="date"
+                      className="flex-1 bg-muted/30 border-none rounded-lg px-3 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary"
+                      value={reportFilter.startDate}
+                      onChange={e => setReportFilter(f => ({ ...f, startDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+                    <label className="text-[10px] font-black text-muted-foreground whitespace-nowrap">Até</label>
+                    <input
+                      type="date"
+                      className="flex-1 bg-muted/30 border-none rounded-lg px-3 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary"
+                      value={reportFilter.endDate}
+                      onChange={e => setReportFilter(f => ({ ...f, endDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="relative flex-1 min-w-[140px]">
+                    <LucideBuilding className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Empresa..."
+                      className="w-full bg-muted/30 border-none rounded-lg pl-7 pr-3 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary"
+                      value={reportFilter.empresa}
+                      onChange={e => setReportFilter(f => ({ ...f, empresa: e.target.value }))}
+                    />
+                  </div>
+                  <div className="relative flex-1 min-w-[140px]">
+                    <LucideLayers className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Setor..."
+                      className="w-full bg-muted/30 border-none rounded-lg pl-7 pr-3 py-1.5 text-xs font-bold focus:ring-1 focus:ring-primary"
+                      value={reportFilter.setor}
+                      onChange={e => setReportFilter(f => ({ ...f, setor: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="h-8 rounded-lg font-bold text-xs gap-1.5 px-4"
+                      onClick={() => loadReports(1, reportFilter)}>
+                      <LucideFilter className="w-3 h-3" /> Filtrar
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 rounded-lg font-bold text-xs"
+                      onClick={() => {
+                        const empty = { startDate: '', endDate: '', empresa: '', setor: '' };
+                        setReportFilter(empty);
+                        loadReports(1, empty);
+                      }}>
+                      Limpar
+                    </Button>
+                  </div>
+                </div>
+                {reportsTotal > 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-3 font-bold">{reportsTotal} registros encontrados</p>
+                )}
+              </CardContent>
+            </Card>
 
             <Card className="border-none shadow-sm overflow-hidden bg-card/40 backdrop-blur-sm">
               <CardContent className="p-0">
@@ -1503,7 +1704,7 @@ export default function AdminClient() {
                                 onClick={async () => {
                                   if (!confirm('Deseja excluir este registro?')) return;
                                   const res = await fetchNoCache(`/api/attendance?id=${r.id}`, { method: 'DELETE' });
-                                  if (res.ok) loadReports();
+                                  if (res.ok) loadReports(reportPage);
                                 }}
                               >
                                 <LucideTrash className="w-4 h-4" />
@@ -1551,7 +1752,7 @@ export default function AdminClient() {
                               onClick={async () => {
                                 if (!confirm('Deseja excluir este registro?')) return;
                                 const res = await fetchNoCache(`/api/attendance?id=${r.id}`, { method: 'DELETE' });
-                                if (res.ok) loadReports();
+                                if (res.ok) loadReports(reportPage);
                               }}
                             >
                               <LucideTrash className="w-4 h-4" />
@@ -1572,143 +1773,364 @@ export default function AdminClient() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Pagination */}
+            {reportsTotal > REPORTS_PER_PAGE && (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Página {reportPage} de {Math.ceil(reportsTotal / REPORTS_PER_PAGE)} — {reportsTotal} registros
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="h-8 rounded-lg font-black text-[10px] uppercase"
+                    disabled={reportPage === 1 || isLoadingReports}
+                    onClick={() => loadReports(reportPage - 1)}>
+                    <LucideChevronRight className="w-3 h-3 rotate-180" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 rounded-lg font-black text-[10px] uppercase"
+                    disabled={reportPage >= Math.ceil(reportsTotal / REPORTS_PER_PAGE) || isLoadingReports}
+                    onClick={() => loadReports(reportPage + 1)}>
+                    <LucideChevronRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         );
 
       case 'about':
         return (
           <div className="space-y-6 animate-scale-in max-w-5xl mx-auto">
-            <Card className="border-none shadow-lg bg-gradient-to-br from-primary/10 via-background to-background">
-              <CardHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-primary/20 rounded-lg">
-                    <LucideInfo className="w-6 h-6 text-primary" />
+            <Card className="border-none shadow-sm bg-gradient-to-br from-primary/8 via-background to-background">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-2.5 bg-primary/15 rounded-xl shrink-0">
+                    <LucideInfo className="w-5 h-5 text-primary" />
                   </div>
-                  <div>
-                    <CardTitle className="text-2xl font-black uppercase tracking-tight">Presença<span className="text-primary italic">.Pro</span></CardTitle>
-                    <CardDescription className="font-medium">Sistema Corporativo de Gestão de Frequência & Controle de Acessos</CardDescription>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-bold tracking-tight mb-0.5">Presença<span className="text-primary">.Pro</span></h2>
+                    <p className="text-xs text-muted-foreground mb-3">Sistema de gestão de frequência corporativo multi-tenancy</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge variant="secondary" className="font-semibold">v2.0.0</Badge>
+                      <Badge variant="outline" className="border-primary/40 text-primary font-semibold">Next.js 16</Badge>
+                      <Badge variant="outline" className="font-semibold">Audit Log</Badge>
+                      <Badge variant="outline" className="font-semibold">LGPD</Badge>
+                      <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 font-semibold">Produção</Badge>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  O <b>Presença.Pro</b> é uma solução full-stack moderna, projetada para orquestrar o controle de presença em ambientes corporativos multi-tenancy.
-                  A plataforma elimina processos manuais, oferecendo uma interface reativa, dados em tempo real e uma hierarquia robusta de permissões.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="font-bold">v1.2.0 Stable</Badge>
-                  <Badge variant="outline" className="border-primary/50 text-primary font-bold">Enterprise Ready</Badge>
-                  <Badge variant="outline" className="font-bold">LGPD Compliant</Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Tech Stack */}
-              <Card className="border-none shadow-sm hover-lift transition-all">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base font-black uppercase tracking-widest">
-                    <LucideCode2 className="w-4 h-4 text-blue-500" /> Stack Tecnológico
+              <Card className="border-none shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                    <LucideCode2 className="w-4 h-4 text-blue-500" /> Stack tecnológico
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
-                      <span className="font-bold">Framework Core</span>
-                      <Badge>Next.js 15 (App Router)</Badge>
-                    </li>
-                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
-                      <span className="font-bold">Linguagem</span>
-                      <Badge variant="outline" className="border-blue-500/30 text-blue-600">TypeScript 5.0+</Badge>
-                    </li>
-                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
-                      <span className="font-bold">Estilização</span>
-                      <Badge variant="outline" className="border-cyan-500/30 text-cyan-600">TailwindCSS 4 + Shadcn UI</Badge>
-                    </li>
-                    <li className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
-                      <span className="font-bold">Database & ORM</span>
-                      <div className="flex gap-1">
-                        <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">Prisma</Badge>
-                        <Badge variant="outline" className="border-indigo-500/30 text-indigo-600">PostgreSQL (Neon)</Badge>
-                      </div>
-                    </li>
-                  </ul>
+                <CardContent className="space-y-1.5">
+                  {[
+                    { label: 'Framework', value: 'Next.js 16.2', color: 'text-foreground' },
+                    { label: 'Linguagem', value: 'TypeScript 5.9', color: 'text-blue-600' },
+                    { label: 'UI', value: 'TailwindCSS 4 + shadcn/ui', color: 'text-cyan-600' },
+                    { label: 'ORM', value: 'Prisma 6 + PostgreSQL (Neon)', color: 'text-emerald-600' },
+                    { label: 'Auth', value: 'NextAuth.js 4 + Google OAuth', color: 'text-orange-600' },
+                    { label: 'Gráficos', value: 'Recharts 3', color: 'text-purple-600' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-muted/30">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <span className={`text-xs font-semibold ${color}`}>{value}</span>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
 
-              {/* Destaques de Arquitetura */}
-              <Card className="border-none shadow-sm hover-lift transition-all">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base font-black uppercase tracking-widest">
-                    <LucideZap className="w-4 h-4 text-yellow-500" /> Arquitetura & Performance
+              {/* Segurança & Arquitetura */}
+              <Card className="border-none shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                    <LucideShieldCheck className="w-4 h-4 text-emerald-500" /> Segurança & arquitetura
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-black uppercase text-primary">Server Actions & No-Cache Strategy</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Todas as mutações de dados utilizam Server Actions seguras. O sistema implementa uma estratégia de <code className="bg-muted px-1 rounded">fetchNoCache</code> personalizada para garantir consistência de dados em tempo real, crucial para controle de presença.
-                    </p>
-                  </div>
-                  <div className="space-y-1 pt-2">
-                    <h4 className="text-xs font-black uppercase text-primary">Otimização de Renderização</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Uso extensivo de componentes server-side onde possível, com ilhas de interatividade (Client Components) otimizadas para reduzir TBT (Total Blocking Time). Animações via CSS nativo e classes utilitárias para 60fps constantes.
-                    </p>
-                  </div>
-                  <div className="space-y-1 pt-2">
-                    <h4 className="text-xs font-black uppercase text-primary">Segurança Robusta</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Autenticação via NextAuth.js com sessões criptografadas. Middleware de proteção de rotas e validação de permissões (RBAC) granular no nível da API.
-                    </p>
-                  </div>
+                <CardContent className="space-y-2.5">
+                  {[
+                    { title: 'RBAC granular', desc: 'Roles: admin, educador, suporte, pendente. Permissões por endpoint.' },
+                    { title: 'Sessão com timeout', desc: 'JWT com expiração de 20 min de inatividade. Força logout remoto.' },
+                    { title: 'Rate limiting', desc: 'Proteção por IP contra brute-force no login.' },
+                    { title: 'Audit log', desc: 'Registro imutável de todas as ações sensíveis com usuário e timestamp.' },
+                    { title: 'Validação Zod', desc: 'Todos os inputs de API validados com schema tipado.' },
+                    { title: 'No-cache API', desc: 'Headers personalizados garantem dados sempre frescos.' },
+                  ].map(({ title, desc }) => (
+                    <div key={title} className="space-y-0.5">
+                      <p className="text-xs font-semibold text-foreground">{title}</p>
+                      <p className="text-[11px] text-muted-foreground">{desc}</p>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Funcionalidades */}
-            <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground pl-1 mt-8">Análise Funcional</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="border-l-4 border-l-purple-500 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <LucideShieldCheck className="w-4 h-4 text-purple-500" /> Painel Administrativo (Super Admin)
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="border-l-4 border-l-primary/60 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <LucideShieldCheck className="w-4 h-4 text-primary" /> Painel administrativo
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="list-disc list-outside ml-4 space-y-1 text-xs text-muted-foreground marker:text-purple-500">
-                    <li><b className="text-foreground">Gestão Global:</b> Controle total CRUD de Empresas, Setores e Funcionários.</li>
-                    <li><b className="text-foreground">Dashboard Analytics:</b> Métricas em tempo real de presença, distribuição por empresa e logs de atividade.</li>
-                    <li><b className="text-foreground">Controle de Usuários:</b> Criação de usuários (Educadores), definição de cargos e atribuição específica de quais empresas cada usuário pode acessar.</li>
-                    <li><b className="text-foreground">Gestão de Permissões:</b> Toggle granular para permitir que educadores cadastrem novos funcionários ou editem nomes.</li>
-                    <li><b className="text-foreground">Relatórios Auditáveis:</b> Histórico completo de chamadas.</li>
+                  <ul className="space-y-1.5 text-xs text-muted-foreground">
+                    {[
+                      'Dashboard com métricas em tempo real e tendência semanal',
+                      'CRUD completo: Empresas, Setores, Funcionários e Usuários',
+                      'Relatórios com filtros por data, empresa e setor',
+                      'Auditoria — histórico completo de ações com badges por tipo',
+                      'Encerramento remoto de sessão de outros usuários',
+                      'Atribuição de empresas e permissões granulares por usuário',
+                    ].map(item => (
+                      <li key={item} className="flex items-start gap-1.5">
+                        <span className="text-primary mt-0.5">•</span> {item}
+                      </li>
+                    ))}
                   </ul>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-emerald-500 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <LucideUserCheck className="w-4 h-4 text-emerald-500" /> Portal do Educador
+              <Card className="border-l-4 border-l-emerald-500/60 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <LucideUserCheck className="w-4 h-4 text-emerald-500" /> Portal do educador
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="list-disc list-outside ml-4 space-y-1 text-xs text-muted-foreground marker:text-emerald-500">
-                    <li><b className="text-foreground">Fluxo Otimizado:</b> UX guiada em 3 passos (Empresa &rarr; Setor &rarr; Chamada) para máxima velocidade em sala.</li>
-                    <li><b className="text-foreground">Feedback Visual:</b> Indicadores claros de presença (verde) e seleção (azul), com suporte a micro-animações.</li>
-                    <li><b className="text-foreground">Acessibilidade:</b> Controles de tamanho de fonte dinâmicos e Dark Mode.</li>
-                    <li><b className="text-foreground">Edição Rápida:</b> Capacidade de remover presenças lançadas incorretamente e (se permitido) corrigir nomes e cadastrar novos alunos em lote.</li>
-                    <li><b className="text-foreground">Inteligente:</b> Detecção automática de duplicidade de presença no dia.</li>
+                  <ul className="space-y-1.5 text-xs text-muted-foreground">
+                    {[
+                      'Fluxo guiado: Empresa → Setor → Chamada em 3 cliques',
+                      'Detecção automática de duplicidade de presença',
+                      'Edição rápida: remover ou corrigir presenças lançadas',
+                      'Cadastro de novos funcionários (se permitido pelo admin)',
+                      'Dark mode e fonte ajustável para acessibilidade',
+                      'Funcionamento otimizado em tablets e dispositivos móveis',
+                    ].map(item => (
+                      <li key={item} className="flex items-start gap-1.5">
+                        <span className="text-emerald-500 mt-0.5">•</span> {item}
+                      </li>
+                    ))}
                   </ul>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="flex justify-center pt-8 pb-4 opacity-50">
-              <span className="text-[10px] uppercase font-black tracking-widest">Desenvolvido com ❤️ e Código Limpo</span>
+            <div className="flex justify-center pt-4 pb-2">
+              <p className="text-[11px] text-muted-foreground/50">Presença.Pro © 2026 — Desenvolvido com código limpo</p>
             </div>
           </div>
         );
+      case 'audit':
+        return (
+          <div className="page-transition space-y-4">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-black">Registro de auditoria</h2>
+                <p className="text-xs text-muted-foreground mt-1">Histórico de ações sensíveis realizadas no sistema.</p>
+              </div>
+              <Button onClick={() => loadAuditLogs(1)} size="sm" variant="outline" className="h-9 rounded-xl font-bold gap-2 w-full sm:w-auto">
+                <LucideClock className="w-4 h-4" /> Atualizar
+              </Button>
+            </header>
+
+            {(() => {
+              const actionLabel: Record<string, string> = {
+                CREATE: 'Criou', UPDATE: 'Editou', DELETE: 'Excluiu',
+                UPDATE_ROLE: 'Alterou cargo', UPDATE_PERMISSION: 'Alterou permissão',
+              };
+              const entityLabel: Record<string, string> = {
+                funcionarios: 'Funcionário', empresas: 'Empresa', setores: 'Setor',
+                usuarios: 'Usuário', presenca: 'Presença',
+              };
+              const actionColor: Record<string, string> = {
+                CREATE: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30',
+                UPDATE: 'text-blue-600 bg-blue-50 dark:bg-blue-950/30',
+                DELETE: 'text-red-600 bg-red-50 dark:bg-red-950/30',
+                UPDATE_ROLE: 'text-purple-600 bg-purple-50 dark:bg-purple-950/30',
+                UPDATE_PERMISSION: 'text-orange-600 bg-orange-50 dark:bg-orange-950/30',
+              };
+              return (
+                <Card className="border-none shadow-sm overflow-hidden bg-card/40 backdrop-blur-sm">
+                  <CardContent className="p-0">
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-muted/50 hover:bg-transparent">
+                            <TableHead className="text-[10px] font-black text-muted-foreground pl-6 py-4">Data / Hora</TableHead>
+                            <TableHead className="text-[10px] font-black text-muted-foreground py-4">Usuário</TableHead>
+                            <TableHead className="text-[10px] font-black text-muted-foreground py-4">Ação</TableHead>
+                            <TableHead className="text-[10px] font-black text-muted-foreground py-4">Entidade</TableHead>
+                            <TableHead className="text-[10px] font-black text-muted-foreground pr-6 py-4">Detalhe</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {isLoadingAudit ? (
+                            [1,2,3,4,5].map(i => (
+                              <TableRow key={i}><TableCell colSpan={5} className="py-6"><div className="h-4 w-full bg-muted/20 animate-shimmer rounded" /></TableCell></TableRow>
+                            ))
+                          ) : auditLogs.length > 0 ? auditLogs.map(log => (
+                            <TableRow key={log.id} className="border-muted/20 hover:bg-primary/5 transition-colors">
+                              <TableCell className="pl-6 py-3 text-xs text-muted-foreground font-bold whitespace-nowrap">
+                                {new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center text-[9px] font-black text-primary">
+                                    {log.username.substring(0, 2).toUpperCase()}
+                                  </div>
+                                  <span className="text-xs font-bold">{log.username}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-3">
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${actionColor[log.action] ?? 'text-muted-foreground bg-muted/30'}`}>
+                                  {actionLabel[log.action] ?? log.action}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-3 text-xs font-bold">
+                                {entityLabel[log.entity] ?? log.entity}{log.entity_id ? ` #${log.entity_id}` : ''}
+                              </TableCell>
+                              <TableCell className="py-3 pr-6 text-xs text-muted-foreground max-w-[200px] truncate">
+                                {log.details ?? '—'}
+                              </TableCell>
+                            </TableRow>
+                          )) : (
+                            <TableRow><TableCell colSpan={5} className="py-20 text-center text-xs text-muted-foreground">Nenhum registro de auditoria</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="md:hidden p-4 space-y-3">
+                      {isLoadingAudit ? [1,2,3].map(i => <div key={i} className="h-20 bg-muted/20 animate-shimmer rounded-lg" />) :
+                        auditLogs.map(log => (
+                          <Card key={log.id} className="border border-border/50">
+                            <CardContent className="p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold">{log.username}</span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${actionColor[log.action] ?? 'text-muted-foreground bg-muted/30'}`}>
+                                  {actionLabel[log.action] ?? log.action}
+                                </span>
+                                <span className="text-xs text-muted-foreground">{entityLabel[log.entity] ?? log.entity}{log.entity_id ? ` #${log.entity_id}` : ''}</span>
+                              </div>
+                              {log.details && <p className="text-[10px] text-muted-foreground truncate">{log.details}</p>}
+                            </CardContent>
+                          </Card>
+                        ))
+                      }
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {auditTotal > AUDIT_PER_PAGE && (
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] font-bold text-muted-foreground">
+                  Página {auditPage} de {Math.ceil(auditTotal / AUDIT_PER_PAGE)} — {auditTotal} registros
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="h-8 rounded-lg font-bold text-[10px]"
+                    disabled={auditPage === 1 || isLoadingAudit}
+                    onClick={() => loadAuditLogs(auditPage - 1)}>
+                    <LucideChevronRight className="w-3 h-3 rotate-180" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 rounded-lg font-bold text-[10px]"
+                    disabled={auditPage >= Math.ceil(auditTotal / AUDIT_PER_PAGE) || isLoadingAudit}
+                    onClick={() => loadAuditLogs(auditPage + 1)}>
+                    <LucideChevronRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'settings':
+        return (
+          <div className="page-transition space-y-6 max-w-2xl">
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
+                  <LucideUser className="w-4 h-4 text-primary" /> Sessão Atual
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Usuário</span>
+                  <span className="text-xs font-bold">{session?.user?.name || '—'}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">E-mail</span>
+                  <span className="text-xs font-bold">{session?.user?.email || '—'}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                  <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Cargo</span>
+                  <Badge className="text-[10px] font-black uppercase">{session?.user?.role || '—'}</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
+                  <LucideSettings className="w-4 h-4 text-primary" /> Aparência
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                  <span className="text-xs text-muted-foreground">Tema</span>
+                  <div className="flex items-center gap-1">
+                    {[
+                      { value: 'light', label: 'Claro', icon: LucideSun },
+                      { value: 'dark', label: 'Escuro', icon: LucideMoon },
+                      { value: 'system', label: 'Sistema', icon: LucideMonitor },
+                    ].map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        onClick={() => setTheme(value)}
+                        title={label}
+                        className={`p-1.5 rounded-lg transition-all ${theme === value ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/60'}`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-destructive/20 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2 text-destructive">
+                  <LucideLogOut className="w-4 h-4" /> Encerrar Sessão
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground mb-4">Você será redirecionado para a tela de login.</p>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="font-black uppercase tracking-widest text-[10px] rounded-xl"
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                >
+                  <LucideLogOut className="w-4 h-4 mr-2" /> Sair do Sistema
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
       default:
         return (
           <Card className="border-none bg-card/40 flex flex-col items-center justify-center py-20">
@@ -1731,139 +2153,186 @@ export default function AdminClient() {
         />
       )}
 
-      {/* Sidebar - Shadcn Inset Style */}
-      <aside className={`shrink-0 bg-background/60 backdrop-blur-xl flex flex-col rounded-2xl border border-border/50 shadow-sm overflow-hidden relative transition-all duration-300 ease-in-out ${isSidebarCollapsed && !isMobileMenuOpen ? 'w-[80px] p-4' : 'w-64 p-6'
-        } ${isMobileMenuOpen
-          ? 'fixed left-2 top-2 bottom-2 z-50 lg:relative lg:left-0 lg:top-0 lg:bottom-0'
-          : 'hidden lg:flex'
-        }`}>
+      {/* Sidebar */}
+      <aside className={`shrink-0 bg-card flex flex-col rounded-2xl border border-border/50 shadow-sm overflow-hidden relative transition-all duration-300 ease-in-out
+        ${isSidebarCollapsed && !isMobileMenuOpen ? 'w-[60px] px-2 py-4' : 'w-56 px-3 py-4'}
+        ${isMobileMenuOpen ? 'fixed left-2 top-2 bottom-2 z-50 lg:relative lg:left-0 lg:top-0 lg:bottom-0' : 'hidden lg:flex'}
+      `}>
 
-        {/* Close Button Mobile */}
+        {/* Close button — mobile only */}
         <button
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden absolute top-4 right-4 w-8 h-8 rounded-lg bg-muted/50 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all z-50"
+          className="lg:hidden absolute top-3 right-3 w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all z-50"
         >
-          <LucideX className="w-4 h-4" />
+          <LucideX className="w-3.5 h-3.5" />
         </button>
 
-        {/* Toggle Button (Desktop only) */}
+        {/* Collapse toggle — desktop only */}
         <button
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className="hidden lg:flex absolute -right-0 top-12 bg-primary text-primary-foreground w-5 h-10 rounded-l-md items-center justify-center shadow-lg hover:w-6 transition-all z-50"
+          className="hidden lg:flex absolute -right-3 top-14 bg-card border border-border/50 shadow-sm w-6 h-6 rounded-full items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all z-50"
+          title={isSidebarCollapsed ? 'Expandir' : 'Recolher'}
         >
           {isSidebarCollapsed ? <LucidePanelLeftOpen className="w-3 h-3" /> : <LucidePanelLeftClose className="w-3 h-3" />}
         </button>
 
-        {/* Logo Section */}
-        <div className={`mb-8 flex items-center gap-2.5 transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}>
-          <div className="w-8 h-8 bg-primary rounded-lg shrink-0 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 animate-float">
-            <LucideShieldCheck className="w-5 h-5" />
-          </div>
-          {(!isSidebarCollapsed || isMobileMenuOpen) && (
-            <span className="font-black text-lg tracking-tighter uppercase whitespace-nowrap animate-in fade-in slide-in-from-left-2">
-              Presença<span className="text-primary italic">.Pro</span>
-            </span>
-          )}
+        {/* User profile */}
+        <div className={`mb-3 ${isSidebarCollapsed && !isMobileMenuOpen ? 'flex justify-center' : ''}`}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              {isSidebarCollapsed && !isMobileMenuOpen ? (
+                <button className="focus:outline-none rounded-xl" title={session?.user?.name || 'Usuário'}>
+                  <Avatar className="h-9 w-9 rounded-xl">
+                    {session?.user?.image
+                      ? <AvatarImage src={session.user.image} alt={session.user.name || ''} referrerPolicy="no-referrer" />
+                      : <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs rounded-xl">{session?.user?.name?.substring(0, 2).toUpperCase() || 'AD'}</AvatarFallback>
+                    }
+                  </Avatar>
+                </button>
+              ) : (
+                <button className="w-full flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-muted/50 transition-colors text-left focus:outline-none group">
+                  <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                    {session?.user?.image
+                      ? <AvatarImage src={session.user.image} alt={session.user.name || ''} referrerPolicy="no-referrer" />
+                      : <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs rounded-lg">{session?.user?.name?.substring(0, 2).toUpperCase() || 'AD'}</AvatarFallback>
+                    }
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold truncate leading-tight">{session?.user?.name || 'Administrador'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">{session?.user?.email || ''}</p>
+                  </div>
+                  <LucideChevronDown className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                </button>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="end" className="w-56">
+              <div className="px-3 py-2.5">
+                <p className="text-xs font-semibold truncate">{session?.user?.name || 'Administrador'}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{session?.user?.email || ''}</p>
+                <Badge variant="outline" className="mt-1.5 text-[9px] font-semibold px-1.5 h-4 border-primary/30 text-primary">
+                  {session?.user?.role || 'admin'}
+                </Badge>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
+                className="cursor-pointer"
+              >
+                <LucideLayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
+                className="cursor-pointer"
+              >
+                <LucideSettings className="w-4 h-4 mr-2" /> Configurações
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="cursor-pointer">
+                  {theme === 'dark' ? <LucideMoon className="w-4 h-4 mr-2" /> : theme === 'light' ? <LucideSun className="w-4 h-4 mr-2" /> : <LucideMonitor className="w-4 h-4 mr-2" />}
+                  Tema
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => setTheme('light')} className="cursor-pointer">
+                    <LucideSun className="w-4 h-4 mr-2" /> Claro
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme('dark')} className="cursor-pointer">
+                    <LucideMoon className="w-4 h-4 mr-2" /> Escuro
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme('system')} className="cursor-pointer">
+                    <LucideMonitor className="w-4 h-4 mr-2" /> Sistema
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+              >
+                <LucideLogOut className="w-4 h-4 mr-2" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        {/* User Profile Section */}
-        <div className={`mb-6 p-2 rounded-xl bg-primary/5 border border-primary/10 flex items-center gap-3 overflow-hidden transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}>
-          <Avatar className="h-8 w-8 rounded-lg shrink-0 border border-primary/20">
-            {session?.user?.image ? (
-              <AvatarImage src={session.user.image} alt={session.user.name || ''} />
-            ) : (
-              <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-black">
-                {session?.user?.name?.substring(0, 2).toUpperCase() || 'AD'}
-              </AvatarFallback>
+        <div className="border-t border-border/40 mb-3" />
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto custom-scrollbar space-y-4">
+          {/* Grupo Principal */}
+          <div>
+            {(!isSidebarCollapsed || isMobileMenuOpen) && (
+              <button
+                onClick={() => setNavGroupOpen(s => ({ ...s, principal: !s.principal }))}
+                className="w-full flex items-center justify-between px-2 mb-1"
+              >
+                <span className="text-[10px] font-medium text-muted-foreground/50 tracking-wider">Principal</span>
+                <LucideChevronDown className={`w-3 h-3 text-muted-foreground/30 transition-transform duration-200 ${navGroupOpen.principal ? '' : '-rotate-90'}`} />
+              </button>
             )}
-          </Avatar>
-          {(!isSidebarCollapsed || isMobileMenuOpen) && (
-            <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2">
-              <span className="text-[10px] font-black truncate leading-tight uppercase">{session?.user?.name || 'Administrador'}</span>
-              <span className="text-[9px] text-muted-foreground truncate leading-tight">{session?.user?.email || 'admin@presenca.pro'}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Primary Navigation */}
-        <div className="flex-1 space-y-6 overflow-y-auto pr-1 custom-scrollbar overflow-x-hidden">
-          <div className="space-y-1">
-            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'text-center ml-0' : ''}`}>
-              {isSidebarCollapsed && !isMobileMenuOpen ? '•' : 'Principal'}
-            </h3>
-            {[
-              { id: 'overview', label: 'Dashboard', icon: LucideLayoutDashboard },
-              { id: 'companies', label: 'Empresas', icon: LucideBuilding },
-              { id: 'employees', label: 'Funcionários', icon: LucideUsers },
-              { id: 'users', label: 'Acessos', icon: LucideUserCheck },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id as Tab);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === item.id
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  } ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
-                title={isSidebarCollapsed && !isMobileMenuOpen ? item.label : ''}
-              >
-                <item.icon className="w-4 h-4 shrink-0" />
-                {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
-              </button>
-            ))}
+            {(navGroupOpen.principal || isSidebarCollapsed) && (
+              <div className="space-y-0.5">
+                {[
+                  { id: 'overview', label: 'Dashboard', icon: LucideLayoutDashboard },
+                  { id: 'companies', label: 'Empresas', icon: LucideBuilding },
+                  { id: 'employees', label: 'Funcionários', icon: LucideUsers },
+                  { id: 'users', label: 'Acessos', icon: LucideUserCheck },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { setActiveTab(item.id as Tab); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs transition-all duration-150
+                      ${activeTab === item.id ? 'bg-primary/10 text-primary font-semibold' : 'font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground'}
+                      ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
+                    title={isSidebarCollapsed && !isMobileMenuOpen ? item.label : ''}
+                  >
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="whitespace-nowrap">{item.label}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Secondary Navigation */}
-          <div className="space-y-1">
-            <h3 className={`text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-3 ml-2 opacity-50 transition-all ${isSidebarCollapsed && !isMobileMenuOpen ? 'text-center ml-0' : ''}`}>
-              {isSidebarCollapsed && !isMobileMenuOpen ? '•' : 'Sistema'}
-            </h3>
-            {[
-              { id: 'reports', label: 'Relatórios', icon: LucideFileText },
-              { id: 'settings', label: 'Configurações', icon: LucideSettings },
-              { id: 'about', label: 'Sobre o Sistema', icon: LucideInfo },
-            ].map((item) => (
+          {/* Grupo Sistema */}
+          <div>
+            {(!isSidebarCollapsed || isMobileMenuOpen) ? (
               <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id as Tab);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === item.id
-                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                  } ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
-                title={isSidebarCollapsed && !isMobileMenuOpen ? item.label : ''}
+                onClick={() => setNavGroupOpen(s => ({ ...s, sistema: !s.sistema }))}
+                className="w-full flex items-center justify-between px-2 mb-1"
               >
-                <item.icon className="w-4 h-4 shrink-0" />
-                {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="animate-in fade-in slide-in-from-left-2 whitespace-nowrap">{item.label}</span>}
+                <span className="text-[10px] font-medium text-muted-foreground/50 tracking-wider">Sistema</span>
+                <LucideChevronDown className={`w-3 h-3 text-muted-foreground/30 transition-transform duration-200 ${navGroupOpen.sistema ? '' : '-rotate-90'}`} />
               </button>
-            ))}
+            ) : (
+              <div className="border-t border-border/30 mb-1.5" />
+            )}
+            {(navGroupOpen.sistema || isSidebarCollapsed) && (
+              <div className="space-y-0.5">
+                {[
+                  { id: 'reports', label: 'Relatórios', icon: LucideFileText },
+                  { id: 'audit', label: 'Auditoria', icon: LucideClipboardList },
+                  { id: 'settings', label: 'Configurações', icon: LucideSettings },
+                  { id: 'about', label: 'Sobre', icon: LucideInfo },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { setActiveTab(item.id as Tab); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs transition-all duration-150
+                      ${activeTab === item.id ? 'bg-primary/10 text-primary font-semibold' : 'font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground'}
+                      ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
+                    title={isSidebarCollapsed && !isMobileMenuOpen ? item.label : ''}
+                  >
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="whitespace-nowrap">{item.label}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+        </nav>
 
-        {/* Bottom Section */}
-        <div className="pt-6 mt-6 border-t border-border/50 space-y-4 shrink-0">
-          {(!isSidebarCollapsed || isMobileMenuOpen) && (
-            <div className="flex items-center justify-between px-2 animate-in fade-in zoom-in-95">
-              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-[8px]">Dark Mode</span>
-              <ModeToggle />
-            </div>
-          )}
-          <button
-            onClick={() => {
-              signOut({ callbackUrl: '/login' });
-              setIsMobileMenuOpen(false);
-            }}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group ${isSidebarCollapsed && !isMobileMenuOpen ? 'justify-center' : ''}`}
-            title={isSidebarCollapsed && !isMobileMenuOpen ? 'Sair' : ''}
-          >
-            <LucideLogOut className="w-4 h-4 shrink-0 group-hover:rotate-180 transition-transform duration-500" />
-            {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="animate-in fade-in slide-in-from-left-2">Sair do Sistema</span>}
-          </button>
-        </div>
       </aside>
 
       {/* Main Content (Inset) */}
@@ -1881,14 +2350,15 @@ export default function AdminClient() {
                   <LucideMenu className="w-5 h-5" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="flex items-center gap-2 uppercase tracking-tighter text-lg sm:text-xl lg:text-2xl font-black break-words">
-                    {activeTab === 'overview' && 'Dashboard Central'}
-                    {activeTab === 'companies' && 'Gestão de Empresas'}
-                    {activeTab === 'employees' && 'Base de Colaboradores'}
-                    {activeTab === 'users' && 'Controle de Acessos'}
-                    {activeTab === 'reports' && 'Inteligência de Dados'}
-                    {activeTab === 'settings' && 'Ajustes do Sistema'}
-                    {activeTab === 'about' && 'Informações do Sistema'}
+                  <h1 className="flex items-center gap-2 text-lg sm:text-xl lg:text-2xl font-black wrap-break-word">
+                    {activeTab === 'overview' && 'Dashboard'}
+                    {activeTab === 'companies' && 'Empresas'}
+                    {activeTab === 'employees' && 'Funcionários'}
+                    {activeTab === 'users' && 'Controle de acessos'}
+                    {activeTab === 'reports' && 'Histórico de presença'}
+                    {activeTab === 'audit' && 'Auditoria'}
+                    {activeTab === 'settings' && 'Configurações'}
+                    {activeTab === 'about' && 'Sobre o sistema'}
                   </h1>
                   <p className="text-muted-foreground text-xs font-medium mt-1 hidden sm:block">Gerenciamento inteligente de presença e frequência.</p>
                 </div>

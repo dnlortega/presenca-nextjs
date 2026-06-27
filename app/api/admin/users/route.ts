@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { jsonResponse } from '../../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../lib/auth';
+import { getSession, isAdmin } from '../../../../lib/session';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -39,7 +38,7 @@ export async function GET() {
         // Flatten the relationship for easier consumption
         const formattedUsers = users.map(u => ({
             ...u,
-            empresas: u.usuario_empresas.map((ue: any) => ue.empresa.nome)
+            empresas: u.usuario_empresas.map(ue => ue.empresa.nome)
         }));
 
         return jsonResponse(formattedUsers);

@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../lib/auth';
+import { getSession } from '../../../lib/session';
 import { jsonResponse } from '../../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions as any);
+    const session = await getSession();
     if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
-    const s: any = session;
-    const userId = s.user.id;
-    const role = s.user.role;
+    const userId = session.user.id;
+    const role = session.user.role;
 
     if (role === 'admin') {
       const allCompanies = await prisma.empresas.findMany({

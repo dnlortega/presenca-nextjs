@@ -3,25 +3,22 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import prisma from '../../../lib/prisma';
 import { jsonResponse } from '../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../lib/auth';
+import { getSession, isAdmin as checkAdmin } from '../../../lib/session';
 
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions as any);
+    const session = await getSession();
     if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
     const url = new URL(req.url);
     const companyName = url.searchParams.get('company');
     const sectorName = url.searchParams.get('sector');
 
-    const s: any = session;
-    const userId = s.user?.id;
+    const userId = session.user?.id;
 
-    // 1. Fetch allowed companies for this user
     let allowedCompanyNames: string[] = [];
-    if (s.user?.role === 'admin') {
+    if (session.user?.role === 'admin') {
       const all = await prisma.empresas.findMany();
       allowedCompanyNames = all.map(c => c.nome);
     } else {
@@ -37,8 +34,8 @@ export async function GET(req: Request) {
       return jsonResponse({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // 3. Build query - need to get IDs from names
-    let where: any = {};
+    type WhereClause = { empresa_id?: number | { in: number[] }; setor_id?: number };
+    let where: WhereClause = {};
 
     if (companyName) {
       // Find company by name to get ID
@@ -107,11 +104,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions as any);
-    const s: any = session;
-    if (!s) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession();
+    if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
-    const user = s.user;
+    const user = session.user;
     const isEducator = user.role === 'educador';
     const isAdmin = user.role === 'admin';
 

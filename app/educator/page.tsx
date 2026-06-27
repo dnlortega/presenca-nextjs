@@ -1,11 +1,9 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../lib/auth';
 import { redirect } from 'next/navigation';
+import { getSession } from '../../lib/session';
 import EducatorClient from '../../components/EducatorClient';
 
 export default async function EducatorPage() {
-  const session = await getServerSession(authOptions as any);
-  const s: any = session;
-  if (!s || s?.user?.role !== 'educador') redirect('/login');
+  const session = await getSession();
+  if (!session || session.user?.role !== 'educador') redirect('/login');
   return <EducatorClient />;
 }

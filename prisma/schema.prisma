@@ -66,6 +66,7 @@ model usuarios {
   role             Role?
   can_register     Boolean            @default(false)
   can_edit         Boolean            @default(false)
+  force_logout     Boolean            @default(false)
   created_at       DateTime           @default(now())
   updated_at       DateTime           @updatedAt
   usuario_empresas usuario_empresas[]
@@ -77,6 +78,20 @@ model empresas {
   setores          setores[]
   funcionarios     funcionarios[]
   usuario_empresas usuario_empresas[]
+}
+
+model audit_log {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int?
+  action     String   @db.VarChar(100)
+  entity     String   @db.VarChar(100)
+  entity_id  Int?
+  details    String?  @db.Text
+  created_at DateTime @default(now())
+
+  @@index([usuario_id])
+  @@index([action])
+  @@index([created_at])
 }
 
 enum Role {

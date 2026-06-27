@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { jsonResponse } from '../../../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../../lib/auth';
+import { getSession, isAdmin } from '../../../../../lib/session';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -35,8 +34,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 

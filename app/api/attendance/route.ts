@@ -3,36 +3,17 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import prisma from '../../../lib/prisma';
 import { jsonResponse } from '../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../lib/auth';
-
-// Helper to get the current date in Sao Paulo timezone (UTC-3)
-function getSaoPauloDate() {
-  const now = new Date();
-  const offset = -3 * 60 * 60 * 1000; // -3 hours
-  const localTime = new Date(now.getTime() + offset);
-
-  const year = localTime.getUTCFullYear();
-  const month = localTime.getUTCMonth();
-  const day = localTime.getUTCDate();
-
-  return new Date(Date.UTC(year, month, day, 12, 0, 0));
-}
+import { getSession } from '../../../lib/session';
+import { audit } from '../../../lib/audit';
+import { getSaoPauloDateRange, getSaoPauloRefDate } from '../../../lib/timezone';
 
 function getDayRange() {
-  const refDate = getSaoPauloDate();
-  const start = new Date(refDate);
-  start.setUTCHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-
-  return { start, end, refDate };
+  return { ...getSaoPauloDateRange(), refDate: getSaoPauloRefDate() };
 }
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions as any);
+    const session = await getSession();
     if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
@@ -148,7 +129,7 @@ export async function GET(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await getServerSession(authOptions as any);
+    const session = await getSession();
     if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
@@ -158,10 +139,12 @@ export async function DELETE(req: Request) {
       return jsonResponse({ error: 'Missing ID' }, { status: 400 });
     }
 
+    const userId = session?.user?.id ? Number(session.user.id) : null;
     await prisma.presenca.delete({
       where: { id: Number(id) }
     });
 
+    await audit({ usuario_id: userId, action: 'DELETE', entity: 'presenca', entity_id: Number(id) });
     return jsonResponse({ ok: true });
   } catch (err) {
     console.error(err);

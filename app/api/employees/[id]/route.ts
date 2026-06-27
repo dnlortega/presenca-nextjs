@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { jsonResponse } from '../../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../lib/auth';
+import { getSession, isAdmin } from '../../../../lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions as any);
+        const session = await getSession();
         if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
-        const s: any = session;
-        const user = s.user;
+        const user = session.user;
         const { id } = await params;
         const employeeId = Number(id);
         const body = await req.json();
@@ -22,17 +20,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             return jsonResponse({ error: 'Nome inválido' }, { status: 400 });
         }
 
-        // Permission Check: Admin OR (Educator + can_edit)
-        const isAdmin = user.role === 'admin';
+        const userIsAdmin = isAdmin(session);
         const isEducator = user.role === 'educador';
-        const canEdit = user.can_edit;
 
-        if (!isAdmin && !(isEducator && canEdit)) {
+        if (!userIsAdmin && !(isEducator && user.can_edit)) {
             return jsonResponse({ error: 'Permissão negada para editar funcionários' }, { status: 403 });
         }
 
-        // Additional Security: If educator, verify they have access to this employee's company
-        if (!isAdmin) {
+        if (!userIsAdmin) {
             const employee = await prisma.funcionarios.findUnique({
                 where: { id: employeeId },
                 select: { empresa_id: true }

@@ -246,7 +246,7 @@ export default function EducatorClient() {
         <span className="font-black text-[10px] sm:text-xs uppercase tracking-tighter">Educador<span className="text-primary">.Pro</span></span>
       </div>
       <div className="flex items-center gap-2 sm:gap-3">
-        {(session?.user as any)?.can_register && !isBulkMode && (
+        {session?.user?.can_register && !isBulkMode && (
           <Button
             variant="outline"
             size="icon"

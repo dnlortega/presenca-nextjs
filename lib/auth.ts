@@ -3,6 +3,8 @@ import GoogleProvider from 'next-auth/providers/google';
 import { NextAuthOptions } from 'next-auth';
 import bcrypt from 'bcryptjs';
 import prisma from './prisma';
+import { rateLimit } from './rate-limit';
+import type { Session } from 'next-auth';
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -20,6 +22,11 @@ export const authOptions: NextAuthOptions = {
                     const cleanUsername = username.trim();
                     const cleanPassword = password.trim();
 
+                    const { allowed } = rateLimit(`login:${cleanUsername}`);
+                    if (!allowed) {
+                        throw new Error('Muitas tentativas. Tente novamente em 15 minutos.');
+                    }
+
                     const user = await prisma.usuarios.findUnique({
                         where: { username: cleanUsername }
                     });
@@ -33,7 +40,7 @@ export const authOptions: NextAuthOptions = {
                         return null;
                     }
 
-                    return { id: user.id.toString(), name: user.username, role: user.role };
+                    return { id: user.id.toString(), name: user.username, role: user.role ?? undefined };
                 } catch (error) {
                     console.error('Erro no authorize:', error);
                     return null;
@@ -45,7 +52,11 @@ export const authOptions: NextAuthOptions = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
         }),
     ],
-    session: { strategy: 'jwt' },
+    session: {
+        strategy: 'jwt',
+        maxAge: 20 * 60,   // 20 minutes inactivity timeout
+        updateAge: 5 * 60, // refresh token every 5 minutes when active
+    },
     secret: process.env.NEXTAUTH_SECRET,
     pages: {
         signIn: '/login',
@@ -81,20 +92,43 @@ export const authOptions: NextAuthOptions = {
                         ]
                     }
                 });
-
                 token.role = dbUser?.role || 'pendente';
                 token.id = dbUser?.id;
                 token.can_register = dbUser?.can_register || false;
                 token.can_edit = dbUser?.can_edit || false;
+                token.forceLogout = false;
+            } else if (token.id) {
+                // Check force_logout flag and refresh permissions on every token update
+                try {
+                    const dbUser = await prisma.usuarios.findUnique({
+                        where: { id: token.id as number },
+                        select: { force_logout: true, role: true, can_register: true, can_edit: true }
+                    });
+                    if (dbUser?.force_logout) {
+                        await prisma.usuarios.update({
+                            where: { id: token.id as number },
+                            data: { force_logout: false }
+                        });
+                        token.forceLogout = true;
+                    } else {
+                        token.forceLogout = false;
+                        token.role = dbUser?.role || 'pendente';
+                        token.can_register = dbUser?.can_register || false;
+                        token.can_edit = dbUser?.can_edit || false;
+                    }
+                } catch {
+                    // Don't break auth on DB errors
+                }
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
-                (session.user as any).role = token.role;
-                (session.user as any).id = token.id;
-                (session.user as any).can_register = token.can_register;
-                (session.user as any).can_edit = token.can_edit;
+                session.user.role = token.role ?? 'pendente';
+                session.user.id = token.id ?? 0;
+                session.user.can_register = token.can_register ?? false;
+                session.user.can_edit = token.can_edit ?? false;
+                session.user.forceLogout = token.forceLogout ?? false;
             }
             return session;
         }

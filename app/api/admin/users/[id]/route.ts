@@ -1,30 +1,36 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { jsonResponse } from '../../../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../../lib/auth';
+import { getSession, isAdmin } from '../../../../../lib/session';
+import { Role } from '@prisma/client';
+import { userUpdateSchema } from '../../../../../lib/schemas';
+import { audit } from '../../../../../lib/audit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { id } = await params;
-        const body = await req.json();
-        const { role, empresas } = body; // empresas: array of names
+        const parsed = userUpdateSchema.safeParse(await req.json());
+        if (!parsed.success) {
+            return jsonResponse({ error: parsed.error.issues[0].message }, { status: 400 });
+        }
+        const { role, empresas } = parsed.data;
         const userId = Number(id);
+        const adminId = session?.user?.id ? Number(session.user.id) : null;
 
         if (role) {
-            await prisma.$executeRawUnsafe(
-                'UPDATE "usuarios" SET "role" = $1::"Role", "updated_at" = NOW() WHERE "id" = $2',
-                role,
-                userId
-            );
+            await prisma.usuarios.update({
+                where: { id: userId },
+                data: { role: role as Role }
+            });
+            await audit({ usuario_id: adminId, action: 'UPDATE_ROLE', entity: 'usuarios', entity_id: userId, details: role });
         }
 
         if (Array.isArray(empresas)) {
@@ -46,18 +52,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             ]);
         }
 
-        if (typeof body.can_register === 'boolean') {
+        if (typeof parsed.data.can_register === 'boolean') {
             await prisma.usuarios.update({
                 where: { id: userId },
-                data: { can_register: body.can_register }
+                data: { can_register: parsed.data.can_register }
             });
+            await audit({ usuario_id: adminId, action: 'UPDATE_PERMISSION', entity: 'usuarios', entity_id: userId, details: `can_register=${parsed.data.can_register}` });
         }
 
-        if (typeof body.can_edit === 'boolean') {
+        if (typeof parsed.data.can_edit === 'boolean') {
             await prisma.usuarios.update({
                 where: { id: userId },
-                data: { can_edit: body.can_edit }
+                data: { can_edit: parsed.data.can_edit }
             });
+            await audit({ usuario_id: adminId, action: 'UPDATE_PERMISSION', entity: 'usuarios', entity_id: userId, details: `can_edit=${parsed.data.can_edit}` });
         }
 
         return jsonResponse({ success: true });

@@ -92,25 +92,24 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    text-transform: uppercase;
   }
 
   body {
-    @apply bg-background text-foreground text-[14px] leading-relaxed transition-colors duration-300;
-    font-family: var(--font-geist-sans), sans-serif;
-    text-transform: uppercase;
+    @apply bg-background text-foreground leading-relaxed transition-colors duration-300;
+    font-family: var(--font-inter), 'Inter', sans-serif;
+    font-size: 13px;
   }
 
   h1 {
-    @apply text-2xl font-black tracking-tight;
+    @apply text-xl font-black tracking-tight;
   }
 
   h2 {
-    @apply text-xl font-bold tracking-tight;
+    @apply text-lg font-bold tracking-tight;
   }
 
   h3 {
-    @apply text-lg font-bold tracking-tight;
+    @apply text-base font-bold tracking-tight;
   }
 }
 

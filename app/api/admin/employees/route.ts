@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../lib/auth';
+import { getSession, isAdmin } from '../../../../lib/session';
 import { jsonResponse } from '../../../../lib/api-helpers';
+import { employeeSchema } from '../../../../lib/schemas';
+import { audit } from '../../../../lib/audit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -42,26 +43,23 @@ export async function GET() {
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { nome, empresa_id, setor_id, valor } = await req.json();
-
-        if (!nome || !empresa_id || !setor_id) {
-            return jsonResponse({ error: 'Todos os campos são obrigatórios' }, { status: 400 });
+        const parsed = employeeSchema.safeParse(await req.json());
+        if (!parsed.success) {
+            return jsonResponse({ error: parsed.error.issues[0].message }, { status: 400 });
         }
+        const { nome, empresa_id, setor_id, valor } = parsed.data;
+        const adminId = session?.user?.id ? Number(session.user.id) : null;
 
-        await prisma.funcionarios.create({
-            data: {
-                nome,
-                empresa_id: Number(empresa_id),
-                setor_id: Number(setor_id),
-                valor: valor ? Number(valor) : null
-            }
+        const created = await prisma.funcionarios.create({
+            data: { nome, empresa_id, setor_id, valor: valor ?? null }
         });
 
+        await audit({ usuario_id: adminId, action: 'CREATE', entity: 'funcionarios', entity_id: created.id, details: nome });
         return jsonResponse({ success: true });
     } catch (err) {
         console.error(err);

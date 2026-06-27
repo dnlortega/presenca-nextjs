@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 import { jsonResponse } from '../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../lib/auth';
+import { getSession } from '../../../lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
-        const session = await getServerSession(authOptions as any);
+        const session = await getSession();
         if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
         const url = new URL(req.url);
@@ -18,12 +17,11 @@ export async function GET(req: Request) {
             return jsonResponse({ error: 'Company is required' }, { status: 400 });
         }
 
-        const s: any = session;
-        const userId = s.user?.id;
+        const userId = session.user?.id;
 
         // 1. Validate user has access to this company
         let allowedCompanyNames: string[] = [];
-        if (s.user?.role === 'admin') {
+        if (session.user?.role === 'admin') {
             const all = await prisma.empresas.findMany();
             allowedCompanyNames = all.map(c => c.nome);
         } else {

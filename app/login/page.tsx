@@ -9,7 +9,7 @@ import {
   LucideArrowRight
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { ModeToggle } from "../../components/ModeToggle";
 
@@ -153,19 +153,6 @@ export default function LoginPage() {
               Google
             </Button>
           </CardContent>
-          <CardFooter className="bg-muted/30 py-4 flex flex-col gap-2">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center w-full">Acesso de Demonstração</p>
-            <div className="flex gap-2 w-full">
-              <div onClick={() => { setUsername('admin'); setPassword('Admin#1234') }} className="flex-1 bg-card/50 p-2 rounded-lg border border-border cursor-pointer hover:border-primary transition-colors text-center">
-                <span className="block text-[8px] font-bold text-muted-foreground">ADMIN</span>
-                <span className="text-[9px] font-black">admin</span>
-              </div>
-              <div onClick={() => { setUsername('educador'); setPassword('Educador#123') }} className="flex-1 bg-card/50 p-2 rounded-lg border border-border cursor-pointer hover:border-primary transition-colors text-center">
-                <span className="block text-[8px] font-bold text-muted-foreground">EDUCADOR</span>
-                <span className="text-[9px] font-black">educador</span>
-              </div>
-            </div>
-          </CardFooter>
         </Card>
 
         <p className="text-center text-[10px] text-muted-foreground font-medium">

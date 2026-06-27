@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { jsonResponse } from '../../../../lib/api-helpers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../lib/auth';
+import { getSession, isAdmin } from '../../../../lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -27,8 +26,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions as any);
-        if (!session || (session as any).user?.role !== 'admin') {
+        const session = await getSession();
+        if (!isAdmin(session)) {
             return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
         }
 
