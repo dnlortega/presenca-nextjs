@@ -35,14 +35,18 @@ import {
   LucidePercent,
   LucideSun,
   LucideMoon,
-  LucideMonitor
+  LucideMonitor,
+  LucideKey,
+  LucideUserX,
+  LucideUserPlus,
+  LucideBuilding2
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
+  XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, CartesianGrid, Legend
 } from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -53,6 +57,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { fetchNoCache } from "../lib/fetch-helpers";
 import CompanyDistributionChart from "./CompanyDistributionChart";
 
@@ -380,6 +385,19 @@ export default function AdminClient() {
       } else {
         const data = await res.json() as { error?: string };
         toast.error(data.error || 'Erro ao encerrar sessão');
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const deleteUser = async (userId: number, username: string) => {
+    try {
+      const res = await fetchNoCache(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success(`Usuário ${username} excluído`);
+        loadUsers();
+      } else {
+        const data = await res.json() as { error?: string };
+        toast.error(data.error || 'Erro ao excluir usuário');
       }
     } catch (e) { console.error(e); }
   };
@@ -769,7 +787,7 @@ export default function AdminClient() {
                             <BarChart data={dashboardData.hourlyDistribution} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
                               <XAxis dataKey="hour" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
                               <YAxis tick={{ fontSize: 9 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
+                              <ChartTooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
                               <Bar dataKey="count" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} opacity={0.85} />
                             </BarChart>
                           </ResponsiveContainer>
@@ -838,7 +856,7 @@ export default function AdminClient() {
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                             <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                             <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [typeof v === 'number' ? v : 0, 'Presenças']} />
+                            <ChartTooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [typeof v === 'number' ? v : 0, 'Presenças']} />
                             <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} />
                           </LineChart>
                         </ResponsiveContainer>
@@ -865,7 +883,7 @@ export default function AdminClient() {
                             <BarChart data={dashboardData.companyMonthly} layout="vertical" margin={{ top: 0, right: 16, left: 4, bottom: 0 }}>
                               <XAxis type="number" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} allowDecimals={false} />
                               <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={90} />
-                              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
+                              <ChartTooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
                               <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} opacity={0.85} />
                             </BarChart>
                           </ResponsiveContainer>
@@ -890,7 +908,7 @@ export default function AdminClient() {
                                 <Pie data={dashboardData.sectorDonut} cx="50%" cy="50%" innerRadius={30} outerRadius={52} dataKey="value" paddingAngle={2}>
                                   {dashboardData.sectorDonut.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} opacity={0.9} />)}
                                 </Pie>
-                                <Tooltip contentStyle={{ fontSize: 10, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
+                                <ChartTooltip contentStyle={{ fontSize: 10, borderRadius: 8, border: '1px solid hsl(var(--border))' }} formatter={(v) => [v, 'Presenças']} />
                                 <Legend iconSize={7} wrapperStyle={{ fontSize: 9 }} />
                               </PieChart>
                             </ResponsiveContainer>
@@ -1531,36 +1549,91 @@ export default function AdminClient() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            {u.role === 'educador' && (
-                              <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => openAccessModal(u)}>
-                                ACESSOS
-                              </Button>
-                            )}
-                            {u.role !== 'educador' && (
-                              <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => updateUserRole(u.id, 'educador')}>
-                                EDUCADOR
-                              </Button>
-                            )}
-
-                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => updateUserRole(u.id, 'admin')}>
-                              ADMIN
-                            </Button>
-                            {u.role === 'educador' && (
-                              <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-0 h-7 rounded-md border-primary/20 text-primary hover:bg-primary/5" onClick={() => openUserCompModal(u)}>
-                                EMPRESAS
-                              </Button>
-                            )}
-                            {u.role !== 'pendente' && (
-                              <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-0 h-7 rounded-md text-muted-foreground hover:text-destructive" onClick={() => updateUserRole(u.id, 'pendente')}>
-                                BLOQUEAR
-                              </Button>
-                            )}
-                            {u.role !== 'admin' && (
-                              <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-0 h-7 rounded-md text-muted-foreground hover:text-destructive" onClick={() => forceUserLogout(u.id, u.username)}>
-                                <LucideLogOut className="w-3 h-3 mr-1" /> SESSÃO
-                              </Button>
-                            )}
+                          <TableCell className="text-right">
+                            <TooltipProvider delayDuration={300}>
+                              <div className="flex items-center justify-end gap-0.5">
+                                {u.role === 'educador' ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => openAccessModal(u)}>
+                                        <LucideKey className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Configurar acessos</TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => updateUserRole(u.id, 'educador')}>
+                                        <LucideUserPlus className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Promover a educador</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {u.role !== 'admin' && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => updateUserRole(u.id, 'admin')}>
+                                        <LucideShieldCheck className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Promover a admin</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {u.role === 'educador' && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => openUserCompModal(u)}>
+                                        <LucideBuilding2 className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Gerenciar empresas</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {u.role !== 'pendente' && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-amber-500" onClick={() => updateUserRole(u.id, 'pendente')}>
+                                        <LucideUserX className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Bloquear usuário</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {u.role !== 'admin' && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => forceUserLogout(u.id, u.username)}>
+                                        <LucideLogOut className="w-4 h-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Encerrar sessão</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {u.role !== 'admin' && (
+                                  <Popover>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <PopoverTrigger asChild>
+                                          <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                            <LucideTrash2 className="w-4 h-4" />
+                                          </Button>
+                                        </PopoverTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Excluir usuário</TooltipContent>
+                                    </Tooltip>
+                                    <PopoverContent className="w-56 p-3" side="left">
+                                      <p className="text-sm font-semibold mb-1">Excluir <span className="text-primary">{u.username}</span>?</p>
+                                      <p className="text-xs text-muted-foreground mb-3">Esta ação não pode ser desfeita.</p>
+                                      <Button size="sm" variant="destructive" className="w-full" onClick={() => deleteUser(u.id, u.username)}>
+                                        Confirmar exclusão
+                                      </Button>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                              </div>
+                            </TooltipProvider>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1599,27 +1672,51 @@ export default function AdminClient() {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
-                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 flex-1 min-w-[100px]" onClick={() => updateUserRole(u.id, 'educador')}>
-                              EDUCADOR
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-primary/20 text-primary hover:bg-primary/5 flex-1 min-w-[100px]" onClick={() => updateUserRole(u.id, 'admin')}>
-                              ADMIN
-                            </Button>
+                          <div className="flex items-center gap-1 pt-2 border-t border-border/50">
+                            {u.role === 'educador' ? (
+                              <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-600" title="Configurar acessos" onClick={() => openAccessModal(u)}>
+                                <LucideKey className="w-4 h-4" />
+                              </Button>
+                            ) : (
+                              <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-600" title="Promover a educador" onClick={() => updateUserRole(u.id, 'educador')}>
+                                <LucideUserPlus className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {u.role !== 'admin' && (
+                              <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" title="Promover a admin" onClick={() => updateUserRole(u.id, 'admin')}>
+                                <LucideShieldCheck className="w-4 h-4" />
+                              </Button>
+                            )}
                             {u.role === 'educador' && (
-                              <>
-                                <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-emerald-500/20 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 flex-1 min-w-[100px]" onClick={() => openAccessModal(u)}>
-                                  ACESSOS
-                                </Button>
-                                <Button size="sm" variant="outline" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md border-primary/20 text-primary hover:bg-primary/5 flex-1 min-w-[100px]" onClick={() => openUserCompModal(u)}>
-                                  EMPRESAS
-                                </Button>
-                              </>
+                              <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" title="Gerenciar empresas" onClick={() => openUserCompModal(u)}>
+                                <LucideBuilding2 className="w-4 h-4" />
+                              </Button>
                             )}
                             {u.role !== 'pendente' && (
-                              <Button size="sm" variant="ghost" className="text-[10px] font-black px-3 py-1.5 h-auto rounded-md text-muted-foreground hover:text-destructive w-full" onClick={() => updateUserRole(u.id, 'pendente')}>
-                                BLOQUEAR
+                              <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-amber-500" title="Bloquear usuário" onClick={() => updateUserRole(u.id, 'pendente')}>
+                                <LucideUserX className="w-4 h-4" />
                               </Button>
+                            )}
+                            {u.role !== 'admin' && (
+                              <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive" title="Encerrar sessão" onClick={() => forceUserLogout(u.id, u.username)}>
+                                <LucideLogOut className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {u.role !== 'admin' && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive" title="Excluir usuário">
+                                    <LucideTrash2 className="w-4 h-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-3" side="top">
+                                  <p className="text-sm font-semibold mb-1">Excluir <span className="text-primary">{u.username}</span>?</p>
+                                  <p className="text-xs text-muted-foreground mb-3">Esta ação não pode ser desfeita.</p>
+                                  <Button size="sm" variant="destructive" className="w-full" onClick={() => deleteUser(u.id, u.username)}>
+                                    Confirmar exclusão
+                                  </Button>
+                                </PopoverContent>
+                              </Popover>
                             )}
                           </div>
                         </div>

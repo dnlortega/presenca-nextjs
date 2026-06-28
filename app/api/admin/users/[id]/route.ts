@@ -74,3 +74,51 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const session = await getSession();
+        if (!isAdmin(session)) {
+            return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { id } = await params;
+        const userId = Number(id);
+        const adminId = session?.user?.id ? Number(session.user.id) : null;
+
+        if (userId === adminId) {
+            return jsonResponse({ error: 'Não é possível excluir sua própria conta' }, { status: 403 });
+        }
+
+        const target = await prisma.usuarios.findUnique({
+            where: { id: userId },
+            select: { id: true, role: true, username: true }
+        });
+
+        if (!target) {
+            return jsonResponse({ error: 'Usuário não encontrado' }, { status: 404 });
+        }
+
+        if (target.role === 'admin') {
+            return jsonResponse({ error: 'Não é possível excluir outro administrador' }, { status: 403 });
+        }
+
+        await prisma.$transaction([
+            prisma.usuario_empresas.deleteMany({ where: { usuario_id: userId } }),
+            prisma.usuarios.delete({ where: { id: userId } }),
+        ]);
+
+        await audit({
+            usuario_id: adminId,
+            action: 'DELETE_USER',
+            entity: 'usuarios',
+            entity_id: userId,
+            details: `Usuário ${target.username} excluído pelo admin`
+        });
+
+        return jsonResponse({ success: true });
+    } catch (err) {
+        console.error('Erro ao excluir usuário:', err);
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
+    }
+}

@@ -60,6 +60,9 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
+    const session = await getSession();
+    if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
     const empresaNome = searchParams.get('empresa');
     const setorNome = searchParams.get('setor');
