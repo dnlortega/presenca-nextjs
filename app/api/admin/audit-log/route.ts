@@ -76,10 +76,20 @@ export async function GET(req: Request) {
     }
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
     try {
         const session = await getSession();
         if (!isAdmin(session)) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
+
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
+        if (id) {
+            const logId = Number(id);
+            if (isNaN(logId) || logId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
+            await prisma.audit_log.delete({ where: { id: logId } });
+            return jsonResponse({ success: true, deleted: 1 });
+        }
 
         const { count } = await prisma.audit_log.deleteMany({});
         return jsonResponse({ success: true, deleted: count });

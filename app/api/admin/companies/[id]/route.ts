@@ -5,6 +5,7 @@ import prisma from '../../../../../lib/prisma';
 import { jsonResponse } from '../../../../../lib/api-helpers';
 import { getSession, isAdmin } from '../../../../../lib/session';
 import { audit } from '../../../../../lib/audit';
+import { companySchema } from '../../../../../lib/schemas';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,13 +21,13 @@ export async function PUT(
         }
 
         const { id } = await params;
-        const { nome } = await req.json();
-        const companyId = parseInt(id);
+        const companyId = Number(id);
+        if (isNaN(companyId) || companyId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
 
-        if (!nome) {
-            return jsonResponse({ error: 'Nome é obrigatório' }, { status: 400 });
-        }
+        const parsed = companySchema.safeParse(await req.json());
+        if (!parsed.success) return jsonResponse({ error: parsed.error.issues[0].message }, { status: 400 });
 
+        const { nome } = parsed.data;
         const adminId = session?.user?.id ? Number(session.user.id) : null;
         const company = await prisma.empresas.update({
             where: { id: companyId },
@@ -55,12 +56,11 @@ export async function DELETE(
         }
 
         const { id } = await params;
-        const companyId = parseInt(id);
-        const adminId = session?.user?.id ? Number(session.user.id) : null;
+        const companyId = Number(id);
+        if (isNaN(companyId) || companyId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
 
-        await prisma.empresas.delete({
-            where: { id: companyId }
-        });
+        const adminId = session?.user?.id ? Number(session.user.id) : null;
+        await prisma.empresas.delete({ where: { id: companyId } });
 
         await audit({ usuario_id: adminId, action: 'DELETE', entity: 'empresas', entity_id: companyId });
         return jsonResponse({ success: true });

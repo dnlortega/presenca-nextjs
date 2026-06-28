@@ -41,6 +41,12 @@ export function TabAudit() {
 
   const [localFilter, setLocalFilter] = React.useState(auditFilter);
 
+  const deleteLog = async (id: number) => {
+    const res = await fetchNoCache(`/api/admin/audit-log?id=${id}`, { method: 'DELETE' });
+    if (res.ok) { loadAuditLogs(auditPage, auditFilter); toast.success('Registro excluído'); }
+    else toast.error('Erro ao excluir registro');
+  };
+
   const applyFilter = () => {
     setAuditFilter(localFilter);
     loadAuditLogs(1, localFilter);
@@ -141,16 +147,17 @@ export function TabAudit() {
                   <TableHead className="text-[10px] font-black text-muted-foreground py-4">Usuário</TableHead>
                   <TableHead className="text-[10px] font-black text-muted-foreground py-4">Ação</TableHead>
                   <TableHead className="text-[10px] font-black text-muted-foreground py-4">Entidade</TableHead>
-                  <TableHead className="text-[10px] font-black text-muted-foreground pr-6 py-4">Detalhe</TableHead>
+                  <TableHead className="text-[10px] font-black text-muted-foreground py-4">Detalhe</TableHead>
+                  <TableHead className="text-[10px] font-black text-muted-foreground pr-6 py-4 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingAudit ? (
                   [1,2,3,4,5].map(i => (
-                    <TableRow key={i}><TableCell colSpan={5} className="py-6"><div className="h-4 w-full bg-muted/20 animate-shimmer rounded" /></TableCell></TableRow>
+                    <TableRow key={i}><TableCell colSpan={6} className="py-6"><div className="h-4 w-full bg-muted/20 animate-shimmer rounded" /></TableCell></TableRow>
                   ))
                 ) : auditLogs.length > 0 ? auditLogs.map(log => (
-                  <TableRow key={log.id} className="border-muted/20 hover:bg-primary/5 transition-colors">
+                  <TableRow key={log.id} className="border-muted/20 hover:bg-primary/5 transition-colors group">
                     <TableCell className="pl-6 py-3 text-xs text-muted-foreground font-bold whitespace-nowrap">
                       {new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </TableCell>
@@ -170,13 +177,21 @@ export function TabAudit() {
                     <TableCell className="py-3 text-xs font-bold">
                       {ENTITY_LABEL[log.entity] ?? log.entity}{log.entity_id ? ` #${log.entity_id}` : ''}
                     </TableCell>
-                    <TableCell className="py-3 pr-6 text-xs text-muted-foreground max-w-[200px] truncate">
+                    <TableCell className="py-3 text-xs text-muted-foreground max-w-[200px] truncate">
                       {log.details ?? '—'}
+                    </TableCell>
+                    <TableCell className="py-3 pr-6 text-right">
+                      <ConfirmAction onConfirm={() => deleteLog(log.id)} title="Excluir registro?">
+                        <Button variant="ghost" size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </ConfirmAction>
                     </TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <EmptyState icon={Trash2} title="Nenhum registro de auditoria" description="As ações sensíveis aparecerão aqui." />
                     </TableCell>
                   </TableRow>
@@ -193,9 +208,16 @@ export function TabAudit() {
                   <CardContent className="p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold">{log.username}</span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <ConfirmAction onConfirm={() => deleteLog(log.id)} title="Excluir registro?">
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md">
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </ConfirmAction>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${ACTION_COLOR[log.action] ?? 'text-muted-foreground bg-muted/30'}`}>

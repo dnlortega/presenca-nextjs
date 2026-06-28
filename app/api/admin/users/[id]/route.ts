@@ -19,12 +19,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         const { id } = await params;
+        const userId = Number(id);
+        if (isNaN(userId) || userId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
+
         const parsed = userUpdateSchema.safeParse(await req.json());
         if (!parsed.success) {
             return jsonResponse({ error: parsed.error.issues[0].message }, { status: 400 });
         }
         const { role, empresas } = parsed.data;
-        const userId = Number(id);
         const adminId = session?.user?.id ? Number(session.user.id) : null;
 
         if (role) {
@@ -84,14 +86,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
         const { id } = await params;
         const userId = Number(id);
+        if (isNaN(userId) || userId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
+
         const adminId = session?.user?.id ? Number(session.user.id) : null;
         const { username } = await req.json();
 
-        if (!username || typeof username !== 'string' || username.trim().length < 2) {
-            return jsonResponse({ error: 'Nome de usuário inválido (mínimo 2 caracteres)' }, { status: 400 });
+        if (!username || typeof username !== 'string') {
+            return jsonResponse({ error: 'Nome de usuário inválido' }, { status: 400 });
         }
 
         const clean = username.trim();
+        if (clean.length < 2 || clean.length > 100) {
+            return jsonResponse({ error: 'Nome de usuário deve ter entre 2 e 100 caracteres' }, { status: 400 });
+        }
         const existing = await prisma.usuarios.findUnique({ where: { username: clean } });
         if (existing && existing.id !== userId) {
             return jsonResponse({ error: 'Este nome de usuário já está em uso' }, { status: 409 });
@@ -116,6 +123,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
         const { id } = await params;
         const userId = Number(id);
+        if (isNaN(userId) || userId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
+
         const adminId = session?.user?.id ? Number(session.user.id) : null;
 
         if (userId === adminId) {

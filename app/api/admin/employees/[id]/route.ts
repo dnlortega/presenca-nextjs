@@ -5,6 +5,7 @@ import prisma from '../../../../../lib/prisma';
 import { jsonResponse } from '../../../../../lib/api-helpers';
 import { getSession, isAdmin } from '../../../../../lib/session';
 import { audit } from '../../../../../lib/audit';
+import { employeeSchema } from '../../../../../lib/schemas';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,20 +18,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         const { id } = await params;
-        const { nome, empresa_id, setor_id, valor } = await req.json();
+        const empId = Number(id);
+        if (isNaN(empId) || empId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
+
+        const parsed = employeeSchema.safeParse(await req.json());
+        if (!parsed.success) return jsonResponse({ error: parsed.error.issues[0].message }, { status: 400 });
+
+        const { nome, empresa_id, setor_id, valor } = parsed.data;
         const adminId = session?.user?.id ? Number(session.user.id) : null;
 
         await prisma.funcionarios.update({
-            where: { id: Number(id) },
-            data: {
-                nome,
-                empresa_id: Number(empresa_id),
-                setor_id: Number(setor_id),
-                valor: valor ? Number(valor) : null
-            }
+            where: { id: empId },
+            data: { nome, empresa_id, setor_id, valor: valor ?? null }
         });
 
-        await audit({ usuario_id: adminId, action: 'UPDATE', entity: 'funcionarios', entity_id: Number(id), details: nome });
+        await audit({ usuario_id: adminId, action: 'UPDATE', entity: 'funcionarios', entity_id: empId, details: nome });
         return jsonResponse({ success: true });
     } catch (err) {
         console.error(err);
@@ -46,12 +48,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         }
 
         const { id } = await params;
-        const adminId = session?.user?.id ? Number(session.user.id) : null;
-        await prisma.funcionarios.delete({
-            where: { id: Number(id) }
-        });
+        const empId = Number(id);
+        if (isNaN(empId) || empId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
 
-        await audit({ usuario_id: adminId, action: 'DELETE', entity: 'funcionarios', entity_id: Number(id) });
+        const adminId = session?.user?.id ? Number(session.user.id) : null;
+        await prisma.funcionarios.delete({ where: { id: empId } });
+
+        await audit({ usuario_id: adminId, action: 'DELETE', entity: 'funcionarios', entity_id: empId });
         return jsonResponse({ success: true });
     } catch (err) {
         console.error(err);

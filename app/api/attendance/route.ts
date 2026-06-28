@@ -7,9 +7,9 @@ import prisma from '../../../lib/prisma';
 import { jsonResponse } from '../../../lib/api-helpers';
 import { getSession, isAdmin, isEducator } from '../../../lib/session';
 import { audit } from '../../../lib/audit';
+import { getSaoPauloDateRange, getSaoPauloRefDate } from '../../../lib/timezone';
 
 const MAX_IDS = 500;
-import { getSaoPauloDateRange, getSaoPauloRefDate } from '../../../lib/timezone';
 
 function getDayRange() {
   return { ...getSaoPauloDateRange(), refDate: getSaoPauloRefDate() };
@@ -38,10 +38,33 @@ export async function POST(req: Request) {
 
     const validIds = [...new Set(employeeIds.map(Number).filter(n => !isNaN(n) && n > 0))];
 
+    // If educator, restrict to employees in their companies
+    let allowedIds = validIds;
+    if (!isAdmin(session)) {
+      const userId = Number(session.user.id);
+      const mappings = await prisma.usuario_empresas.findMany({
+        where: { usuario_id: userId },
+        select: { empresa_id: true },
+      });
+      const allowedCompanyIds = mappings.map(m => m.empresa_id);
+      const ownedEmployees = await prisma.funcionarios.findMany({
+        where: { id: { in: validIds }, empresa_id: { in: allowedCompanyIds } },
+        select: { id: true },
+      });
+      allowedIds = ownedEmployees.map(e => e.id);
+    }
+
+    if (allowedIds.length === 0) {
+      return jsonResponse({ ok: true, count: 0 });
+    }
+
     const result = await prisma.presenca.createMany({
-      data: validIds.map(id => ({ funcionario_id: id, data_hora: refDate })),
+      data: allowedIds.map(id => ({ funcionario_id: id, data_hora: refDate })),
       skipDuplicates: true,
     });
+
+    const userId = session.user?.id ? Number(session.user.id) : null;
+    await audit({ usuario_id: userId, action: 'CREATE', entity: 'presenca', entity_id: null });
 
     return jsonResponse({ ok: true, count: result.count });
   } catch (err) {
@@ -72,6 +95,15 @@ export async function GET(req: Request) {
 
     if (!empresa) {
       return jsonResponse({ error: 'Company not found' }, { status: 404 });
+    }
+
+    // Educators can only query their own companies
+    if (!isAdmin(session)) {
+      const userId = Number(session.user.id);
+      const linked = await prisma.usuario_empresas.findFirst({
+        where: { usuario_id: userId, empresa_id: empresa.id },
+      });
+      if (!linked) return jsonResponse({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Find sector by name (within the company) - case insensitive
@@ -136,11 +168,25 @@ export async function DELETE(req: Request) {
     }
 
     const userId = session?.user?.id ? Number(session.user.id) : null;
-    await prisma.presenca.delete({
-      where: { id: Number(id) }
-    });
+    const presencaId = Number(id);
+    if (isNaN(presencaId) || presencaId <= 0) return jsonResponse({ error: 'ID inválido' }, { status: 400 });
 
-    await audit({ usuario_id: userId, action: 'DELETE', entity: 'presenca', entity_id: Number(id) });
+    // Educators can only delete presença from their own companies
+    if (!isAdmin(session)) {
+      const record = await prisma.presenca.findUnique({
+        where: { id: presencaId },
+        select: { funcionario: { select: { empresa_id: true } } },
+      });
+      if (!record) return jsonResponse({ error: 'Not found' }, { status: 404 });
+      const linked = await prisma.usuario_empresas.findFirst({
+        where: { usuario_id: userId!, empresa_id: record.funcionario.empresa_id },
+      });
+      if (!linked) return jsonResponse({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await prisma.presenca.delete({ where: { id: presencaId } });
+
+    await audit({ usuario_id: userId, action: 'DELETE', entity: 'presenca', entity_id: presencaId });
     return jsonResponse({ ok: true });
   } catch (err) {
     console.error(err);
