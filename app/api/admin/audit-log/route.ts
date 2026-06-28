@@ -48,3 +48,16 @@ export async function GET(req: Request) {
         return jsonResponse({ error: 'Server error' }, { status: 500 });
     }
 }
+
+export async function DELETE() {
+    try {
+        const session = await getSession();
+        if (!isAdmin(session)) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
+
+        const { count } = await prisma.audit_log.deleteMany({});
+        return jsonResponse({ success: true, deleted: count });
+    } catch (err) {
+        console.error(err);
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
+    }
+}

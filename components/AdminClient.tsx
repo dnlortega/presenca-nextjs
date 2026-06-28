@@ -2212,14 +2212,43 @@ export default function AdminClient() {
                 <h2 className="text-xl font-black">Registro de auditoria</h2>
                 <p className="text-xs text-muted-foreground mt-1">Histórico de ações sensíveis realizadas no sistema.</p>
               </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={() => loadAuditLogs(1)} size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0">
-                    <LucideClock className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Atualizar</TooltipContent>
-              </Tooltip>
+              <div className="flex gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => loadAuditLogs(1)} size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0">
+                      <LucideClock className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Atualizar</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <ConfirmAction
+                        onConfirm={async () => {
+                          const res = await fetchNoCache('/api/admin/audit-log', { method: 'DELETE' });
+                          if (res.ok) {
+                            setAuditLogs([]);
+                            setAuditTotal(0);
+                            setAuditPage(1);
+                            toast.success('Registros de auditoria apagados');
+                          } else {
+                            toast.error('Erro ao limpar auditoria');
+                          }
+                        }}
+                        title="Limpar auditoria?"
+                        description="Todos os registros de auditoria serão excluídos permanentemente."
+                        confirmText="Limpar tudo"
+                      >
+                        <Button size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0 border-destructive/30 text-destructive hover:bg-destructive/5">
+                          <LucideTrash2 className="w-4 h-4" />
+                        </Button>
+                      </ConfirmAction>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Limpar registros</TooltipContent>
+                </Tooltip>
+              </div>
             </header>
 
             {(() => {
