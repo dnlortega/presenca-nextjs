@@ -1646,7 +1646,6 @@ export default function AdminClient() {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <TooltipProvider delayDuration={300}>
                               <div className="flex items-center justify-end gap-0.5">
                                 {u.role === 'educador' ? (
                                   <Tooltip>
@@ -1729,7 +1728,6 @@ export default function AdminClient() {
                                   </Popover>
                                 )}
                               </div>
-                            </TooltipProvider>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2465,6 +2463,7 @@ export default function AdminClient() {
   };
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="min-h-screen bg-muted/30 lg:flex p-2 gap-2 overflow-hidden">
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -2955,5 +2954,6 @@ export default function AdminClient() {
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }
