@@ -1,8 +1,9 @@
-﻿// github.com/dnlortega
+// github.com/dnlortega
 // linkedin.com/in/daniel-op
 const config = {
   plugins: {
-    "@tailwindcss/postcss": {},
+    tailwindcss: {},
+    autoprefixer: {},
   },
 };
 
