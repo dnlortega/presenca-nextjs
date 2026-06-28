@@ -5,8 +5,10 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import prisma from '../../../lib/prisma';
 import { jsonResponse } from '../../../lib/api-helpers';
-import { getSession } from '../../../lib/session';
+import { getSession, isAdmin, isEducator } from '../../../lib/session';
 import { audit } from '../../../lib/audit';
+
+const MAX_IDS = 500;
 import { getSaoPauloDateRange, getSaoPauloRefDate } from '../../../lib/timezone';
 
 function getDayRange() {
@@ -18,6 +20,9 @@ export async function POST(req: Request) {
     const session = await getSession();
     if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
 
+    const canRegister = isAdmin(session) || (isEducator(session) && session.user.can_register === true);
+    if (!canRegister) return jsonResponse({ error: 'Forbidden' }, { status: 403 });
+
     const body = await req.json();
     const { employeeIds } = body;
 
@@ -25,9 +30,13 @@ export async function POST(req: Request) {
       return jsonResponse({ error: 'No employee IDs provided' }, { status: 400 });
     }
 
+    if (employeeIds.length > MAX_IDS) {
+      return jsonResponse({ error: `Máximo de ${MAX_IDS} registros por requisição` }, { status: 400 });
+    }
+
     const { refDate } = getDayRange();
 
-    const validIds = [...new Set(employeeIds.map(Number).filter(n => !isNaN(n)))];
+    const validIds = [...new Set(employeeIds.map(Number).filter(n => !isNaN(n) && n > 0))];
 
     const result = await prisma.presenca.createMany({
       data: validIds.map(id => ({ funcionario_id: id, data_hora: refDate })),
@@ -117,6 +126,7 @@ export async function DELETE(req: Request) {
   try {
     const session = await getSession();
     if (!session) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
+    if (!isEducator(session)) return jsonResponse({ error: 'Forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

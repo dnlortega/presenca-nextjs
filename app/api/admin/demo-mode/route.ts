@@ -2,9 +2,9 @@
 // linkedin.com/in/daniel-op
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
-import { getSession } from '../../../../lib/session';
+import { getSession, isAdmin } from '../../../../lib/session';
 
-const SUPERADMIN = 'dnlortega@gmail.com';
+const SUPERADMIN = process.env.SUPERADMIN_EMAIL ?? 'dnlortega@gmail.com';
 
 async function read(): Promise<boolean> {
   try {
@@ -16,6 +16,8 @@ async function read(): Promise<boolean> {
 }
 
 export async function GET() {
+  const session = await getSession();
+  if (!isAdmin(session)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const enabled = await read();
   return NextResponse.json({ enabled });
 }
