@@ -29,7 +29,7 @@ model presenca {
   funcionario    funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
   data_hora      DateTime     @default(now()) @db.Date
 
-  @@index([funcionario_id, data_hora])
+  @@unique([funcionario_id, data_hora])
   @@index([funcionario_id])
   @@index([data_hora])
 }

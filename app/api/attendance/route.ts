@@ -25,35 +25,16 @@ export async function POST(req: Request) {
       return jsonResponse({ error: 'No employee IDs provided' }, { status: 400 });
     }
 
-    const { start, end, refDate } = getDayRange();
-    let count = 0;
+    const { refDate } = getDayRange();
 
-    for (const id of employeeIds) {
-      const nid = Number(id);
-      if (isNaN(nid)) continue;
+    const validIds = [...new Set(employeeIds.map(Number).filter(n => !isNaN(n)))];
 
-      const existing = await prisma.presenca.findFirst({
-        where: {
-          funcionario_id: nid,
-          data_hora: {
-            gte: start,
-            lt: end,
-          },
-        },
-      });
+    const result = await prisma.presenca.createMany({
+      data: validIds.map(id => ({ funcionario_id: id, data_hora: refDate })),
+      skipDuplicates: true,
+    });
 
-      if (!existing) {
-        await prisma.presenca.create({
-          data: {
-            funcionario_id: nid,
-            data_hora: refDate
-          }
-        });
-        count++;
-      }
-    }
-
-    return jsonResponse({ ok: true, count });
+    return jsonResponse({ ok: true, count: result.count });
   } catch (err) {
     console.error(err);
     return jsonResponse({ error: 'Server error' }, { status: 500 });
