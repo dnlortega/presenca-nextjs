@@ -24,6 +24,7 @@ export async function GET() {
                 can_register: true,
                 can_edit: true,
                 created_at: true,
+                password_hash: true,
                 usuario_empresas: {
                     select: {
                         empresa: {
@@ -38,10 +39,14 @@ export async function GET() {
         });
 
         // Flatten the relationship for easier consumption
-        const formattedUsers = users.map(u => ({
-            ...u,
-            empresas: u.usuario_empresas.map(ue => ue.empresa.nome)
-        }));
+        const formattedUsers = users.map(u => {
+            const { password_hash, usuario_empresas, ...rest } = u;
+            return {
+                ...rest,
+                has_password: !!password_hash,
+                empresas: usuario_empresas.map(ue => ue.empresa.nome),
+            };
+        });
 
         return jsonResponse(formattedUsers);
     } catch (err) {

@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { User, Layers, Building, ShieldCheck, Search, Filter, X, ClipboardList } from 'lucide-react';
+import { User, Layers, Building, ShieldCheck, Search, Filter, X, ClipboardList, Download, CalendarClock, KeyRound } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
@@ -33,7 +33,18 @@ export function Modals() {
     // Access
     isAccessModalOpen, setIsAccessModalOpen,
     accessForm, setAccessForm, isSavingAccess, handleSaveAccess,
+    // Retroactive attendance
+    isRetroModalOpen, setIsRetroModalOpen, employees,
+    retroDate, setRetroDate, retroSelectedIds, setRetroSelectedIds,
+    submitRetroAttendance, isSubmittingRetro,
+    // Password change
+    isPasswordModalOpen, passwordTargetUser, closePasswordModal,
+    changeUserPassword, isChangingPassword,
   } = useAdmin();
+
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [passwordError, setPasswordError] = React.useState('');
 
   const spinner = <div className="animate-spin w-4 h-4 border-2 border-background/30 border-t-background rounded-full" />;
 
@@ -111,14 +122,47 @@ export function Modals() {
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {empHistory && empHistory.records.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => {
+                if (!empHistory) return;
+                const bom = '﻿';
+                const header = 'Data,Funcionário,Setor,Empresa';
+                const rows = empHistory.records.map(r =>
+                  [
+                    new Date(r.data_hora + 'T12:00:00').toLocaleDateString('pt-BR'),
+                    `"${empHistory.employee.nome}"`,
+                    `"${empHistory.employee.setor.nome}"`,
+                    `"${empHistory.employee.empresa.nome}"`,
+                  ].join(',')
+                );
+                const csv = bom + [header, ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `historico-${empHistory.employee.nome.replace(/\s+/g, '-')}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}>
+                <Download className="w-3.5 h-3.5 mr-1.5" /> Exportar CSV
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => { setEmpHistoryOpen(false); setEmpHistory(null); }}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Employee Modal */}
-      <Dialog open={isEmpModalOpen} onOpenChange={open => { if (!open) setIsEmpModalOpen(false); }}>
+      <Dialog open={isEmpModalOpen} onOpenChange={open => {
+        if (!open) {
+          const dirty = empForm.nome.trim() || empForm.empresa_id || empForm.setor_id;
+          if (dirty && !window.confirm('Descartar alterações?')) return;
+          setIsEmpModalOpen(false);
+        }
+      }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -172,7 +216,12 @@ export function Modals() {
       </Dialog>
 
       {/* Sector Modal */}
-      <Dialog open={isSectorModalOpen} onOpenChange={open => { if (!open) setIsSectorModalOpen(false); }}>
+      <Dialog open={isSectorModalOpen} onOpenChange={open => {
+        if (!open) {
+          if (sectorForm.nome.trim() && !window.confirm('Descartar alterações?')) return;
+          setIsSectorModalOpen(false);
+        }
+      }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -226,7 +275,12 @@ export function Modals() {
       </Dialog>
 
       {/* Company Modal */}
-      <Dialog open={isCompModalOpen} onOpenChange={open => { if (!open) setIsCompModalOpen(false); }}>
+      <Dialog open={isCompModalOpen} onOpenChange={open => {
+        if (!open) {
+          if (compForm.nome.trim() && !window.confirm('Descartar alterações?')) return;
+          setIsCompModalOpen(false);
+        }
+      }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -331,6 +385,119 @@ export function Modals() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Retroactive Attendance Modal */}
+      <Dialog open={isRetroModalOpen} onOpenChange={open => {
+        if (!open) { setIsRetroModalOpen(false); setRetroSelectedIds([]); setRetroDate(''); }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="w-5 h-5 text-orange-500" />
+              Presença Retroativa
+            </DialogTitle>
+            <DialogDescription>Registre presenças para uma data passada.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-1.5">
+            <Label className="text-[10px] font-black uppercase tracking-widest">Data</Label>
+            <Input type="date" className="h-9 text-sm"
+              max={new Date().toISOString().slice(0, 10)}
+              value={retroDate} onChange={e => setRetroDate(e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black uppercase tracking-widest">
+              Funcionários ({retroSelectedIds.length} selecionados)
+            </Label>
+            <div className="max-h-56 overflow-y-auto border border-border/40 rounded-xl p-2 space-y-1 custom-scrollbar">
+              {employees.map(emp => {
+                const compName = typeof emp.empresa === 'string' ? emp.empresa : emp.empresa?.nome ?? '';
+                const secName = typeof emp.setor === 'string' ? emp.setor : emp.setor?.nome ?? '';
+                const checked = retroSelectedIds.includes(emp.id);
+                return (
+                  <label key={emp.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-muted/40 cursor-pointer transition-colors">
+                    <input type="checkbox" className="rounded" checked={checked}
+                      onChange={() => setRetroSelectedIds(prev =>
+                        checked ? prev.filter(id => id !== emp.id) : [...prev, emp.id]
+                      )} />
+                    <span className="text-xs font-medium flex-1 truncate">{emp.nome}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{compName} · {secName}</span>
+                  </label>
+                );
+              })}
+              {employees.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">Nenhum funcionário encontrado.</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant="ghost" className="text-[10px] h-7"
+                onClick={() => setRetroSelectedIds(employees.map(e => e.id))}>
+                Selecionar todos
+              </Button>
+              <Button type="button" size="sm" variant="ghost" className="text-[10px] h-7"
+                onClick={() => setRetroSelectedIds([])}>
+                Limpar
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setIsRetroModalOpen(false)}>Cancelar</Button>
+            <Button
+              disabled={!retroDate || retroSelectedIds.length === 0 || isSubmittingRetro}
+              onClick={submitRetroAttendance}
+              className="bg-orange-600 hover:bg-orange-700 shadow-lg shadow-orange-500/20">
+              {isSubmittingRetro ? spinner : `Registrar ${retroSelectedIds.length} presen${retroSelectedIds.length === 1 ? 'ça' : 'ças'}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Password Change Modal */}
+      <Dialog open={isPasswordModalOpen} onOpenChange={open => {
+        if (!open) { closePasswordModal(); setNewPassword(''); setConfirmPassword(''); setPasswordError(''); }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-amber-500" />
+              Alterar Senha
+            </DialogTitle>
+            <DialogDescription>
+              {passwordTargetUser ? `Definir nova senha para ${passwordTargetUser.username}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">Nova Senha</Label>
+              <Input type="password" placeholder="Mínimo 8 caracteres" className="h-9 text-sm"
+                value={newPassword} onChange={e => { setNewPassword(e.target.value); setPasswordError(''); }} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">Confirmar Senha</Label>
+              <Input type="password" placeholder="Repita a senha" className="h-9 text-sm"
+                value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setPasswordError(''); }} />
+            </div>
+            {passwordError && <p className="text-xs text-destructive font-medium">{passwordError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => { closePasswordModal(); setNewPassword(''); setConfirmPassword(''); setPasswordError(''); }}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={isChangingPassword}
+              className="bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-500/20"
+              onClick={() => {
+                if (newPassword.length < 8) { setPasswordError('A senha deve ter pelo menos 8 caracteres'); return; }
+                if (newPassword !== confirmPassword) { setPasswordError('As senhas não coincidem'); return; }
+                if (passwordTargetUser) changeUserPassword(passwordTargetUser.id, newPassword);
+              }}>
+              {isChangingPassword ? spinner : 'Salvar Senha'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

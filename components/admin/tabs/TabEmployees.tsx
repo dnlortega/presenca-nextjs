@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Search, Plus, Edit, Trash, Trash2, Users, Building, ChevronRight, ChevronDown, ClipboardList } from 'lucide-react';
+import { Search, Plus, Edit, Trash, Trash2, Users, Building, ChevronRight, ChevronDown, ClipboardList, ChevronLeft, CalendarClock } from 'lucide-react';
 import { fetchNoCache } from '../../../lib/fetch-helpers';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
@@ -11,6 +11,8 @@ import { EmptyState } from '../../ui/empty-state';
 import { ConfirmAction } from '../ConfirmAction';
 import { useAdmin } from '../AdminContext';
 
+const COMPANIES_PER_PAGE = 8;
+
 export function TabEmployees() {
   const {
     employees, filteredEmployees, companies, sectors,
@@ -18,8 +20,11 @@ export function TabEmployees() {
     expandedCompanies, toggleCompany,
     openEmpModal, handleDeleteEmployee, openEmpHistory,
     isSeedingEmployees, seedEmployees, loadEmployees,
-    setActiveTab,
+    setActiveTab, setIsRetroModalOpen,
   } = useAdmin();
+
+  const [page, setPage] = React.useState(1);
+  React.useEffect(() => { setPage(1); }, [searchTerm]);
 
   if (companies.length === 0 && employees.length === 0) {
     return (
@@ -46,7 +51,9 @@ export function TabEmployees() {
     if (!groupedEmployees[companyName][sectorName]) groupedEmployees[companyName][sectorName] = [];
     groupedEmployees[companyName][sectorName].push(emp);
   });
-  const companyNames = Object.keys(groupedEmployees).sort();
+  const allCompanyNames = Object.keys(groupedEmployees).sort();
+  const totalPages = Math.max(1, Math.ceil(allCompanyNames.length / COMPANIES_PER_PAGE));
+  const companyNames = allCompanyNames.slice((page - 1) * COMPANIES_PER_PAGE, page * COMPANIES_PER_PAGE);
 
   return (
     <div className="page-transition space-y-6">
@@ -63,6 +70,14 @@ export function TabEmployees() {
                 className="bg-muted/50 border-none rounded-lg pl-8 pr-4 py-2 text-xs focus:ring-1 focus:ring-primary w-full sm:w-48 transition-all"
                 value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" onClick={() => setIsRetroModalOpen(true)} className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white shrink-0">
+                  <CalendarClock className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Presença Retroativa</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
@@ -106,7 +121,7 @@ export function TabEmployees() {
           </div>
         </CardHeader>
         <CardContent className="space-y-8">
-          {companyNames.length === 0 ? (
+          {allCompanyNames.length === 0 ? (
             <EmptyState icon={Search} title="Nenhum registro encontrado" description="Tente buscar por outro termo." />
           ) : (
             companyNames.map(compName => {
@@ -172,6 +187,23 @@ export function TabEmployees() {
                 </div>
               );
             })
+          )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2 border-t border-border/40">
+              <p className="text-[10px] font-bold text-muted-foreground">
+                Empresas {(page - 1) * COMPANIES_PER_PAGE + 1}–{Math.min(page * COMPANIES_PER_PAGE, allCompanyNames.length)} de {allCompanyNames.length}
+              </p>
+              <div className="flex gap-1">
+                <Button size="icon" variant="outline" className="h-7 w-7 rounded-lg"
+                  disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </Button>
+                <Button size="icon" variant="outline" className="h-7 w-7 rounded-lg"
+                  disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

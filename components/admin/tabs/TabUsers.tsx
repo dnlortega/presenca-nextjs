@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Mail, Clock, UserCheck, ShieldCheck, UserPlus, UserX, LogOut, Trash2, Edit, Key, Building2 } from 'lucide-react';
+import { Mail, Clock, UserCheck, ShieldCheck, UserPlus, UserX, LogOut, Trash2, Edit, Key, Building2, KeyRound } from 'lucide-react';
 import { Card, CardContent, CardTitle, CardDescription } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
@@ -15,7 +15,7 @@ export function TabUsers() {
     users,
     renamingUser, setRenamingUser, renameUser,
     updateUserRole, forceUserLogout, deleteUser,
-    openAccessModal, openUserCompModal,
+    openAccessModal, openUserCompModal, openPasswordModal,
   } = useAdmin();
 
   return (
@@ -133,6 +133,16 @@ export function TabUsers() {
                             <TooltipContent>Gerenciar empresas</TooltipContent>
                           </Tooltip>
                         )}
+                        {u.has_password && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950" onClick={() => openPasswordModal(u)}>
+                                <KeyRound className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Alterar senha</TooltipContent>
+                          </Tooltip>
+                        )}
                         {u.role !== 'pendente' && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -230,6 +240,11 @@ export function TabUsers() {
                       {u.role === 'educador' && (
                         <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" title="Gerenciar empresas" onClick={() => openUserCompModal(u)}>
                           <Building2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {u.has_password && (
+                        <Button size="icon" variant="ghost" className="h-9 w-9 text-amber-600" title="Alterar senha" onClick={() => openPasswordModal(u)}>
+                          <KeyRound className="w-4 h-4" />
                         </Button>
                       )}
                       {u.role !== 'pendente' && (

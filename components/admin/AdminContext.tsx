@@ -99,6 +99,7 @@ type AdminContextType = {
 
   // Users
   users: User[];
+  pendingUsersCount: number;
   loadingUsers: boolean;
   loadUsers: () => Promise<void>;
   isAccessModalOpen: boolean;
@@ -151,6 +152,24 @@ type AdminContextType = {
   demoMode: boolean | null;
   togglingDemo: boolean;
   toggleDemoMode: () => Promise<void>;
+
+  // Retroactive attendance
+  isRetroModalOpen: boolean;
+  setIsRetroModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  retroDate: string;
+  setRetroDate: React.Dispatch<React.SetStateAction<string>>;
+  retroSelectedIds: number[];
+  setRetroSelectedIds: React.Dispatch<React.SetStateAction<number[]>>;
+  submitRetroAttendance: () => Promise<void>;
+  isSubmittingRetro: boolean;
+
+  // Password change
+  isPasswordModalOpen: boolean;
+  passwordTargetUser: User | null;
+  openPasswordModal: (user: User) => void;
+  closePasswordModal: () => void;
+  changeUserPassword: (userId: number, newPassword: string) => Promise<void>;
+  isChangingPassword: boolean;
 };
 
 const AdminContext = createContext<AdminContextType>({} as AdminContextType);
@@ -210,6 +229,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [isSavingSector, setIsSavingSector] = useState(false);
   const [isSavingAccess, setIsSavingAccess] = useState(false);
   const [isSavingUserComp, setIsSavingUserComp] = useState(false);
+  const [isRetroModalOpen, setIsRetroModalOpen] = useState(false);
+  const [retroDate, setRetroDate] = useState('');
+  const [retroSelectedIds, setRetroSelectedIds] = useState<number[]>([]);
+  const [isSubmittingRetro, setIsSubmittingRetro] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordTargetUser, setPasswordTargetUser] = useState<User | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [empFormErrors, setEmpFormErrors] = useState<Record<string, string>>({});
   const [compFormErrors, setCompFormErrors] = useState<Record<string, string>>({});
   const [sectorFormErrors, setSectorFormErrors] = useState<Record<string, string>>({});
@@ -356,6 +382,28 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     }
     setTogglingDemo(false);
   }, []);
+
+  const submitRetroAttendance = useCallback(async () => {
+    if (!retroDate || retroSelectedIds.length === 0) return;
+    setIsSubmittingRetro(true);
+    try {
+      const res = await fetchNoCache('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeIds: retroSelectedIds, retroDate }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`${data.count} presen${data.count === 1 ? 'ça' : 'ças'} retroativas registradas`);
+        setIsRetroModalOpen(false);
+        setRetroSelectedIds([]);
+        setRetroDate('');
+      } else {
+        toast.error(data.error || 'Erro ao registrar presenças retroativas');
+      }
+    } catch { toast.error('Erro de conexão'); }
+    setIsSubmittingRetro(false);
+  }, [retroDate, retroSelectedIds]);
 
   const loadEmpHistory = useCallback(async (empId: number, filter = historyFilter) => {
     setIsLoadingHistory(true);
@@ -658,6 +706,36 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setIsSavingSector(false);
   }, [sectorForm, editingSector, sectors, loadSectors]);
 
+  const openPasswordModal = useCallback((user: User) => {
+    setPasswordTargetUser(user);
+    setIsPasswordModalOpen(true);
+  }, []);
+
+  const closePasswordModal = useCallback(() => {
+    setIsPasswordModalOpen(false);
+    setPasswordTargetUser(null);
+  }, []);
+
+  const changeUserPassword = useCallback(async (userId: number, newPassword: string) => {
+    setIsChangingPassword(true);
+    try {
+      const res = await fetchNoCache(`/api/admin/users/${userId}/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Senha alterada com sucesso');
+        setIsPasswordModalOpen(false);
+        setPasswordTargetUser(null);
+      } else {
+        toast.error(data.error || 'Erro ao alterar senha');
+      }
+    } catch { toast.error('Erro de conexão'); }
+    setIsChangingPassword(false);
+  }, []);
+
   const handleDeleteSector = useCallback(async (id: number) => {
     try {
       const res = await fetchNoCache(`/api/admin/sectors/${id}`, { method: 'DELETE' });
@@ -686,7 +764,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     isSeedingEmployees, seedEmployees,
     empHistoryOpen, setEmpHistoryOpen, empHistory, setEmpHistory,
     isLoadingHistory, historyFilter, setHistoryFilter, loadEmpHistory, openEmpHistory,
-    users, loadingUsers, loadUsers,
+    users, pendingUsersCount: users.filter(u => u.role === 'pendente').length, loadingUsers, loadUsers,
     isAccessModalOpen, setIsAccessModalOpen, isUserCompModalOpen, setIsUserCompModalOpen,
     selectedUser, accessForm, setAccessForm, userCompForm, companySearch, setCompanySearch,
     isSavingAccess, isSavingUserComp, renamingUser, setRenamingUser,
@@ -698,6 +776,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     auditLogs, auditTotal, auditPage, isLoadingAudit, auditFilter, setAuditFilter,
     loadAuditLogs, AUDIT_PER_PAGE,
     demoMode, togglingDemo, toggleDemoMode,
+    isRetroModalOpen, setIsRetroModalOpen, retroDate, setRetroDate,
+    retroSelectedIds, setRetroSelectedIds, submitRetroAttendance, isSubmittingRetro,
+    isPasswordModalOpen, passwordTargetUser, openPasswordModal, closePasswordModal,
+    changeUserPassword, isChangingPassword,
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

@@ -36,6 +36,15 @@ export async function POST(req: Request) {
 
     const { refDate } = getDayRange();
 
+    // Admins can optionally register for a past date
+    let targetDate = refDate;
+    if (isAdmin(session) && body.retroDate) {
+      const parsed = new Date(body.retroDate + 'T12:00:00-03:00');
+      if (!isNaN(parsed.getTime()) && parsed <= new Date()) {
+        targetDate = parsed;
+      }
+    }
+
     const validIds = [...new Set(employeeIds.map(Number).filter(n => !isNaN(n) && n > 0))];
 
     // If educator, restrict to employees in their companies
@@ -59,7 +68,7 @@ export async function POST(req: Request) {
     }
 
     const result = await prisma.presenca.createMany({
-      data: allowedIds.map(id => ({ funcionario_id: id, data_hora: refDate })),
+      data: allowedIds.map(id => ({ funcionario_id: id, data_hora: targetDate })),
       skipDuplicates: true,
     });
 

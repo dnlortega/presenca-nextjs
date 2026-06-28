@@ -35,6 +35,7 @@ export function AdminSidebar() {
     isSidebarCollapsed, setIsSidebarCollapsed,
     isMobileMenuOpen, setIsMobileMenuOpen,
     navGroupOpen, setNavGroupOpen,
+    pendingUsersCount,
   } = useAdmin();
 
   const collapsed = isSidebarCollapsed && !isMobileMenuOpen;
@@ -144,6 +145,7 @@ export function AdminSidebar() {
             <div className="space-y-0.5">
               {NAV_PRINCIPAL.map(item => (
                 <NavBtn key={item.id} item={item} active={activeTab === item.id} collapsed={collapsed}
+                  badge={item.id === 'users' && pendingUsersCount > 0 ? pendingUsersCount : undefined}
                   onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} />
               ))}
             </div>
@@ -174,9 +176,9 @@ export function AdminSidebar() {
   );
 }
 
-function NavBtn({ item, active, collapsed, onClick }: {
+function NavBtn({ item, active, collapsed, badge, onClick }: {
   item: { id: Tab; label: string; icon: React.ElementType };
-  active: boolean; collapsed: boolean; onClick: () => void;
+  active: boolean; collapsed: boolean; badge?: number; onClick: () => void;
 }) {
   return (
     <button
@@ -186,8 +188,20 @@ function NavBtn({ item, active, collapsed, onClick }: {
         ${collapsed ? 'justify-center' : ''}`}
       title={collapsed ? item.label : ''}
     >
-      <item.icon className="w-4 h-4 shrink-0" />
-      {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+      <div className="relative shrink-0">
+        <item.icon className="w-4 h-4" />
+        {badge !== undefined && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 bg-destructive text-[9px] font-black text-white rounded-full flex items-center justify-center leading-none">
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
+      </div>
+      {!collapsed && <span className="whitespace-nowrap flex-1 text-left">{item.label}</span>}
+      {!collapsed && badge !== undefined && (
+        <span className="ml-auto min-w-[18px] h-4 px-1 bg-destructive/10 text-destructive text-[10px] font-black rounded-full flex items-center justify-center">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 }

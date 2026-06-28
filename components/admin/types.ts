@@ -58,6 +58,7 @@ export type User = {
   role: string | null;
   can_register?: boolean;
   can_edit?: boolean;
+  has_password?: boolean;
   created_at: string;
   empresas?: string[];
 };
