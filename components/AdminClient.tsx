@@ -249,6 +249,7 @@ export default function AdminClient() {
   const AUDIT_PER_PAGE = 20;
   const [demoMode, setDemoMode] = useState<boolean | null>(null);
   const [togglingDemo, setTogglingDemo] = useState(false);
+  const [renamingUser, setRenamingUser] = useState<{ id: number; value: string } | null>(null);
 
   const isSuperAdmin = session?.user?.email === 'dnlortega@gmail.com';
 
@@ -425,6 +426,28 @@ export default function AdminClient() {
         toast.error(data.error || 'Erro ao excluir usuário');
       }
     } catch (e) { setUsers(prev); console.error(e); }
+  };
+
+  const renameUser = async () => {
+    if (!renamingUser) return;
+    const { id, value } = renamingUser;
+    if (!value.trim() || value.trim().length < 2) { toast.error('Nome muito curto'); return; }
+    const prev = users;
+    setUsers(users.map(u => u.id === id ? { ...u, username: value.trim() } : u));
+    setRenamingUser(null);
+    try {
+      const res = await fetchNoCache(`/api/admin/users/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: value.trim() }),
+      });
+      if (res.ok) { toast.success('Nome alterado'); }
+      else {
+        setUsers(prev);
+        const d = await res.json() as { error?: string };
+        toast.error(d.error || 'Erro ao renomear');
+      }
+    } catch { setUsers(prev); toast.error('Erro de conexão'); }
   };
 
   const updateUserRole = async (userId: number, newRole: string) => {
@@ -763,7 +786,14 @@ export default function AdminClient() {
                 <CardContent className="p-3 flex items-center gap-2 text-destructive text-xs">
                   <LucideAlertCircle className="w-4 h-4" />
                   <span>{dashboardError}</span>
-                  <Button size="sm" variant="ghost" onClick={loadDashboard} className="ml-auto text-xs h-7">Tentar novamente</Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" variant="ghost" onClick={loadDashboard} className="ml-auto h-7 w-7">
+                        <LucideClock className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Tentar novamente</TooltipContent>
+                  </Tooltip>
                 </CardContent>
               </Card>
             )}
@@ -1028,9 +1058,14 @@ export default function AdminClient() {
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" onClick={() => openCompModal()} className="font-black uppercase tracking-widest text-[10px] rounded-xl px-4 shadow-lg shadow-primary/20 w-full sm:w-auto">
-                    <LucidePlus className="w-4 h-4 mr-1" /> Nova Empresa
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" onClick={() => openCompModal()} className="rounded-xl shadow-lg shadow-primary/20 shrink-0">
+                        <LucidePlus className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Nova Empresa</TooltipContent>
+                  </Tooltip>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1066,7 +1101,7 @@ export default function AdminClient() {
                                       setIsSectorModalOpen(true);
                                     }}
                                   >
-                                    <LucidePlus className="w-3 h-3 mr-1" /> Novo
+                                    <LucidePlus className="w-3 h-3" />
                                   </Button>
                                 </div>
 
@@ -1255,9 +1290,14 @@ export default function AdminClient() {
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" onClick={() => openSectorModal()} className="font-bold rounded-lg px-4 w-full sm:w-auto" disabled={companies.length === 0}>
-                    <LucidePlus className="w-4 h-4 mr-1" /> Novo Setor
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" onClick={() => openSectorModal()} className="rounded-xl shrink-0" disabled={companies.length === 0}>
+                        <LucidePlus className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Novo Setor</TooltipContent>
+                  </Tooltip>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1386,33 +1426,38 @@ export default function AdminClient() {
                       onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <ConfirmAction
-                    onConfirm={seedEmployees}
-                    title="Popular Base?"
-                    description="Deseja criar 15 funcionários em cada setor? Esta ação pode demorar alguns segundos."
-                    confirmText="Criar"
-                    buttonVariant="default"
-                  >
-                    <Button
-                      size="sm"
-                      className="font-bold rounded-lg px-4 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
-                      disabled={isSeedingEmployees || sectors.length === 0}
-                    >
-                      {isSeedingEmployees ? (
-                        <>
-                          <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full mr-1" />
-                          Criando...
-                        </>
-                      ) : (
-                        <>
-                          <LucideUsers className="w-4 h-4 mr-1" /> Popular (15 por setor)
-                        </>
-                      )}
-                    </Button>
-                  </ConfirmAction>
-                  <Button size="sm" onClick={() => openEmpModal()} className="font-bold rounded-lg px-4 w-full sm:w-auto" disabled={sectors.length === 0}>
-                    <LucidePlus className="w-4 h-4 mr-1" /> Novo
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <ConfirmAction
+                          onConfirm={seedEmployees}
+                          title="Popular Base?"
+                          description="Deseja criar 15 funcionários em cada setor? Esta ação pode demorar alguns segundos."
+                          confirmText="Criar"
+                          buttonVariant="default"
+                        >
+                          <Button
+                            size="icon"
+                            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
+                            disabled={isSeedingEmployees || sectors.length === 0}
+                          >
+                            {isSeedingEmployees
+                              ? <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" />
+                              : <LucideUsers className="w-4 h-4" />}
+                          </Button>
+                        </ConfirmAction>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Popular (15 por setor)</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="icon" onClick={() => openEmpModal()} className="rounded-xl shrink-0" disabled={sectors.length === 0}>
+                        <LucidePlus className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Novo Funcionário</TooltipContent>
+                  </Tooltip>
                   {employees.some(e => !e.setor_id || !e.empresa_id) && (
                     <ConfirmAction
                       onConfirm={async () => {
@@ -1426,8 +1471,8 @@ export default function AdminClient() {
                       title="Excluir Órfãos?"
                       description="Isto removerá permanentemente todos os funcionários sem vínculo de empresa ou setor."
                     >
-                      <Button size="sm" variant="outline" className="font-bold rounded-lg px-4 w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/5">
-                        <LucideTrash2 className="w-4 h-4 mr-1" /> Limpar Órfãos
+                      <Button size="icon" variant="outline" className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5 shrink-0">
+                        <LucideTrash2 className="w-4 h-4" />
                       </Button>
                     </ConfirmAction>
                   )}
@@ -1545,7 +1590,29 @@ export default function AdminClient() {
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex flex-col">
-                                <span className="font-bold text-xs">{u.username}</span>
+                                {renamingUser?.id === u.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      autoFocus
+                                      className="text-xs font-bold bg-muted/50 border border-primary/40 rounded px-1.5 py-0.5 w-32 outline-none"
+                                      value={renamingUser.value}
+                                      onChange={e => setRenamingUser({ id: u.id, value: e.target.value })}
+                                      onKeyDown={e => { if (e.key === 'Enter') renameUser(); if (e.key === 'Escape') setRenamingUser(null); }}
+                                    />
+                                    <button onClick={renameUser} className="text-primary hover:text-primary/70 text-[10px] font-black">OK</button>
+                                    <button onClick={() => setRenamingUser(null)} className="text-muted-foreground hover:text-foreground text-[10px]">✕</button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 group/name">
+                                    <span className="font-bold text-xs">{u.username}</span>
+                                    <button
+                                      onClick={() => setRenamingUser({ id: u.id, value: u.username })}
+                                      className="opacity-0 group-hover/name:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+                                    >
+                                      <LucideEdit className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
                                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                   <LucideMail className="w-3 h-3" /> {u.email || '-'}
                                 </span>
@@ -1766,11 +1833,18 @@ export default function AdminClient() {
                 <p className="text-xs text-muted-foreground font-medium mt-1">Dados detalhados dos registros efetuados.</p>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button onClick={() => loadReports(1)} size="sm" variant="outline" className="h-9 rounded-xl font-bold gap-2">
-                  <LucideClock className="w-4 h-4" /> Atualizar
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={() => loadReports(1)} size="icon" variant="outline" className="h-9 w-9 rounded-xl">
+                      <LucideClock className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Atualizar</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="outline"
                   className="h-9 rounded-xl font-bold gap-2 border-green-500/30 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
                   onClick={() => {
@@ -1780,8 +1854,11 @@ export default function AdminClient() {
                     a.click();
                   }}
                 >
-                  <LucideFileText className="w-4 h-4" /> Exportar CSV
+                  <LucideFileText className="w-4 h-4" />
                 </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Exportar CSV</TooltipContent>
+                </Tooltip>
               </div>
             </header>
 
@@ -1828,18 +1905,27 @@ export default function AdminClient() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" className="h-8 rounded-lg font-bold text-xs gap-1.5 px-4"
-                      onClick={() => loadReports(1, reportFilter)}>
-                      <LucideFilter className="w-3 h-3" /> Filtrar
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-8 rounded-lg font-bold text-xs"
-                      onClick={() => {
-                        const empty = { startDate: '', endDate: '', empresa: '', setor: '' };
-                        setReportFilter(empty);
-                        loadReports(1, empty);
-                      }}>
-                      Limpar
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" className="h-8 w-8 rounded-lg" onClick={() => loadReports(1, reportFilter)}>
+                          <LucideFilter className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Filtrar</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg"
+                          onClick={() => {
+                            const empty = { startDate: '', endDate: '', empresa: '', setor: '' };
+                            setReportFilter(empty);
+                            loadReports(1, empty);
+                          }}>
+                          <LucideX className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Limpar filtros</TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
                 {reportsTotal > 0 && (
@@ -2128,9 +2214,14 @@ export default function AdminClient() {
                 <h2 className="text-xl font-black">Registro de auditoria</h2>
                 <p className="text-xs text-muted-foreground mt-1">Histórico de ações sensíveis realizadas no sistema.</p>
               </div>
-              <Button onClick={() => loadAuditLogs(1)} size="sm" variant="outline" className="h-9 rounded-xl font-bold gap-2 w-full sm:w-auto">
-                <LucideClock className="w-4 h-4" /> Atualizar
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => loadAuditLogs(1)} size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0">
+                    <LucideClock className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Atualizar</TooltipContent>
+              </Tooltip>
             </header>
 
             {(() => {

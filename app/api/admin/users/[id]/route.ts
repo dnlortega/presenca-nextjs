@@ -77,6 +77,36 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 }
 
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const session = await getSession();
+        if (!isAdmin(session)) return jsonResponse({ error: 'Unauthorized' }, { status: 401 });
+
+        const { id } = await params;
+        const userId = Number(id);
+        const adminId = session?.user?.id ? Number(session.user.id) : null;
+        const { username } = await req.json();
+
+        if (!username || typeof username !== 'string' || username.trim().length < 2) {
+            return jsonResponse({ error: 'Nome de usuário inválido (mínimo 2 caracteres)' }, { status: 400 });
+        }
+
+        const clean = username.trim();
+        const existing = await prisma.usuarios.findUnique({ where: { username: clean } });
+        if (existing && existing.id !== userId) {
+            return jsonResponse({ error: 'Este nome de usuário já está em uso' }, { status: 409 });
+        }
+
+        await prisma.usuarios.update({ where: { id: userId }, data: { username: clean } });
+        await audit({ usuario_id: adminId, action: 'UPDATE_USERNAME', entity: 'usuarios', entity_id: userId, details: `username alterado para ${clean}` });
+
+        return jsonResponse({ success: true, username: clean });
+    } catch (err) {
+        console.error('Erro ao renomear usuário:', err);
+        return jsonResponse({ error: 'Server error' }, { status: 500 });
+    }
+}
+
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getSession();
