@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { jsonResponse } from '../../../../../lib/api-helpers';

@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { NextAuthOptions } from 'next-auth';

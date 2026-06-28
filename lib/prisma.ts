@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import { PrismaClient } from '@prisma/client';
 
 declare global {

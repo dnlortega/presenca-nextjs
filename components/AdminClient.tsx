@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
@@ -245,6 +247,26 @@ export default function AdminClient() {
   const [auditPage, setAuditPage] = useState(1);
   const [isLoadingAudit, setIsLoadingAudit] = useState(false);
   const AUDIT_PER_PAGE = 20;
+  const [demoMode, setDemoMode] = useState<boolean | null>(null);
+  const [togglingDemo, setTogglingDemo] = useState(false);
+
+  const isSuperAdmin = session?.user?.email === 'dnlortega@gmail.com';
+
+  const loadDemoMode = async () => {
+    const res = await fetchNoCache('/api/admin/demo-mode');
+    if (res.ok) { const d = await res.json(); setDemoMode(d.enabled); }
+  };
+
+  const toggleDemoMode = async () => {
+    setTogglingDemo(true);
+    const res = await fetchNoCache('/api/admin/demo-mode', { method: 'POST' });
+    if (res.ok) {
+      const d = await res.json();
+      setDemoMode(d.enabled);
+      toast.success(d.enabled ? 'Demo mode ativado — novos usuários Google podem escolher o papel' : 'Demo mode desativado');
+    }
+    setTogglingDemo(false);
+  };
 
   useEffect(() => {
     setSearchTerm('');
@@ -255,6 +277,7 @@ export default function AdminClient() {
     if (activeTab === 'sectors') { loadSectors(); loadCompanies(); }
     if (activeTab === 'reports') loadReports(1);
     if (activeTab === 'audit') loadAuditLogs(1);
+    if (activeTab === 'settings' && isSuperAdmin) loadDemoMode();
   }, [activeTab]);
 
   const loadDashboard = async () => {
@@ -2284,6 +2307,38 @@ export default function AdminClient() {
                 </div>
               </CardContent>
             </Card>
+
+            {isSuperAdmin && (
+              <Card className="border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
+                    <LucideZap className="w-4 h-4 text-primary" /> Demo Mode
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Quando ativo, novos usuários que entram pelo Google podem escolher o papel (admin ou educador) sem precisar de aprovação.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-widest">Status</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {demoMode === null ? 'Carregando...' : demoMode ? 'Ativo — usuários podem escolher papel' : 'Inativo — aprovação manual necessária'}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={demoMode ? 'destructive' : 'default'}
+                      disabled={togglingDemo || demoMode === null}
+                      onClick={toggleDemoMode}
+                      className="font-black uppercase tracking-widest text-[10px] rounded-xl min-w-24"
+                    >
+                      {togglingDemo ? '...' : demoMode ? 'Desativar' : 'Ativar'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="border-destructive/20 shadow-sm">
               <CardHeader>

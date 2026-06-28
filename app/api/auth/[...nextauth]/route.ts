@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import NextAuth from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 

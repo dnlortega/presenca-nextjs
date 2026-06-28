@@ -100,3 +100,8 @@ enum Role {
   suporte
   pendente
 }
+
+model configuracoes {
+  chave String @id @db.VarChar(100)
+  valor String @db.Text
+}

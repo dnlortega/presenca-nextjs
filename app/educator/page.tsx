@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import { redirect } from 'next/navigation';
 import { getSession } from '../../lib/session';
 import EducatorClient from '../../components/EducatorClient';

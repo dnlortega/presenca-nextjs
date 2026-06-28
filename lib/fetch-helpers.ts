@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 /**
  * Fetch helper que sempre desabilita cache
  * Garante que todas as requisições busquem dados frescos do banco

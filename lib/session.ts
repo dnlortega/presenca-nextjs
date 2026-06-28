@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth';
 import type { Session } from 'next-auth';

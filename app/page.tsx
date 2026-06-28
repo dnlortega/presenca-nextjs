@@ -1,7 +1,7 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import { redirect } from 'next/navigation';
 import { getSession } from '../lib/session';
-import PendingView from '../components/PendingView';
-import SessionProviderWrapper from '../components/SessionProviderWrapper';
 
 export default async function Page() {
   const session = await getSession();
@@ -13,11 +13,7 @@ export default async function Page() {
   const role = session.user?.role;
 
   if (role === 'pendente' || !role) {
-    return (
-      <SessionProviderWrapper>
-        <PendingView />
-      </SessionProviderWrapper>
-    );
+    redirect('/escolher-papel');
   }
 
   if (role === 'admin') {

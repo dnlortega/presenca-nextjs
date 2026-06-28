@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 "use client";
 import { useSession, signOut } from "next-auth/react";
 import { LucideShieldAlert, LucideLogOut } from "lucide-react";

@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import { z } from 'zod';
 
 export const employeeSchema = z.object({

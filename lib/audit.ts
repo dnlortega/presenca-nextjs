@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import prisma from './prisma';
 
 interface AuditParams {

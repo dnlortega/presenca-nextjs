@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 const TZ = 'America/Sao_Paulo';
 
 export function getSaoPauloDateRange(): { start: Date; end: Date } {

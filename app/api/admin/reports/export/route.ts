@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import { getSession, isAdmin } from '../../../../../lib/session';
 import prisma from '../../../../../lib/prisma';
 

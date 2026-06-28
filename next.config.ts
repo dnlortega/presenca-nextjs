@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {

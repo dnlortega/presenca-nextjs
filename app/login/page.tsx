@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 "use client";
 import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';

@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 const requests = new Map<string, { count: number; resetAt: number }>();
 
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes

@@ -1,3 +1,5 @@
+﻿// github.com/dnlortega
+// linkedin.com/in/daniel-op
 import prisma from '../../../../lib/prisma';
 import { jsonResponse } from '../../../../lib/api-helpers';
 import { getSession, isAdmin } from '../../../../lib/session';
