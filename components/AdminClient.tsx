@@ -390,68 +390,73 @@ export default function AdminClient() {
   };
 
   const deleteUser = async (userId: number, username: string) => {
+    const prev = users;
+    setUsers(users.filter(u => u.id !== userId));
     try {
       const res = await fetchNoCache(`/api/admin/users/${userId}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success(`Usuário ${username} excluído`);
-        loadUsers();
       } else {
+        setUsers(prev);
         const data = await res.json() as { error?: string };
         toast.error(data.error || 'Erro ao excluir usuário');
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { setUsers(prev); console.error(e); }
   };
 
   const updateUserRole = async (userId: number, newRole: string) => {
+    const prev = users;
+    setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     try {
       const res = await fetchNoCache(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole }),
       });
-      if (res.ok) loadUsers();
-      else alert('Erro ao atualizar cargo');
-    } catch (e) { console.error(e); }
+      if (!res.ok) { setUsers(prev); toast.error('Erro ao atualizar cargo'); }
+    } catch (e) { setUsers(prev); console.error(e); }
   };
 
   const updateUserCanRegister = async (userId: number, canRegister: boolean) => {
+    const prev = users;
+    setUsers(users.map(u => u.id === userId ? { ...u, can_register: canRegister } : u));
     try {
       const res = await fetchNoCache(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ can_register: canRegister }),
       });
-      if (res.ok) loadUsers();
-      else alert('Erro ao atualizar permissão de cadastro');
-    } catch (e) { console.error(e); }
+      if (!res.ok) { setUsers(prev); toast.error('Erro ao atualizar permissão'); }
+    } catch (e) { setUsers(prev); console.error(e); }
   };
 
   const updateUserCanEdit = async (userId: number, canEdit: boolean) => {
+    const prev = users;
+    setUsers(users.map(u => u.id === userId ? { ...u, can_edit: canEdit } : u));
     try {
       const res = await fetchNoCache(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ can_edit: canEdit }),
       });
-      if (res.ok) loadUsers();
-      else alert('Erro ao atualizar permissão de edição');
-    } catch (e) { console.error(e); }
+      if (!res.ok) { setUsers(prev); toast.error('Erro ao atualizar permissão'); }
+    } catch (e) { setUsers(prev); console.error(e); }
   };
 
   const updateUserCompanies = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
+    const prev = users;
+    setUsers(users.map(u => u.id === selectedUser.id ? { ...u, empresas: userCompForm } : u));
+    setIsUserCompModalOpen(false);
     try {
       const res = await fetchNoCache(`/api/admin/users/${selectedUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresas: userCompForm }),
       });
-      if (res.ok) {
-        setIsUserCompModalOpen(false);
-        loadUsers();
-      } else alert('Erro ao atualizar empresas');
-    } catch (e) { console.error(e); }
+      if (!res.ok) { setUsers(prev); toast.error('Erro ao atualizar empresas'); }
+    } catch (e) { setUsers(prev); console.error(e); }
   };
 
   const openUserCompModal = (user: User) => {
@@ -473,8 +478,12 @@ export default function AdminClient() {
   const handleSaveAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
+    const prev = users;
+    setUsers(users.map(u => u.id === selectedUser.id
+      ? { ...u, can_register: accessForm.can_register, can_edit: accessForm.can_edit }
+      : u));
+    setIsAccessModalOpen(false);
     try {
-      // Parallel update
       await Promise.all([
         fetchNoCache(`/api/admin/users/${selectedUser.id}`, {
           method: 'PUT',
@@ -487,10 +496,7 @@ export default function AdminClient() {
           body: JSON.stringify({ can_edit: accessForm.can_edit }),
         })
       ]);
-
-      setIsAccessModalOpen(false);
-      loadUsers();
-    } catch (e) { console.error(e); }
+    } catch (e) { setUsers(prev); console.error(e); }
   };
 
   const toggleCompany = (companyName: string) => {
