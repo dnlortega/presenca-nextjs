@@ -91,6 +91,14 @@ export async function DELETE(req: Request) {
             return jsonResponse({ success: true, deleted: 1 });
         }
 
+        const before = searchParams.get('before');
+        if (before) {
+            const cutoff = new Date(before);
+            if (isNaN(cutoff.getTime())) return jsonResponse({ error: 'Data inválida' }, { status: 400 });
+            const { count } = await prisma.audit_log.deleteMany({ where: { created_at: { lt: cutoff } } });
+            return jsonResponse({ success: true, deleted: count });
+        }
+
         const { count } = await prisma.audit_log.deleteMany({});
         return jsonResponse({ success: true, deleted: count });
     } catch (err) {

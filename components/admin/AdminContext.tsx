@@ -99,6 +99,7 @@ type AdminContextType = {
 
   // Users
   users: User[];
+  currentUser: User | undefined;
   pendingUsersCount: number;
   loadingUsers: boolean;
   loadUsers: () => Promise<void>;
@@ -282,7 +283,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (activeTab === 'sectors') { loadSectors(); loadCompanies(); }
     if (activeTab === 'reports') loadReports(1);
     if (activeTab === 'audit') loadAuditLogs(1);
-    if (activeTab === 'settings' && isSuperAdmin) loadDemoMode();
+    if (activeTab === 'settings') { loadUsers(); if (isSuperAdmin) loadDemoMode(); }
   }, [activeTab]);
 
   useEffect(() => {
@@ -764,7 +765,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     isSeedingEmployees, seedEmployees,
     empHistoryOpen, setEmpHistoryOpen, empHistory, setEmpHistory,
     isLoadingHistory, historyFilter, setHistoryFilter, loadEmpHistory, openEmpHistory,
-    users, pendingUsersCount: users.filter(u => u.role === 'pendente').length, loadingUsers, loadUsers,
+    users,
+    currentUser: users.find(u => session?.user?.email ? u.email === session.user.email : u.id === Number(session?.user?.id)),
+    pendingUsersCount: users.filter(u => u.role === 'pendente').length, loadingUsers, loadUsers,
     isAccessModalOpen, setIsAccessModalOpen, isUserCompModalOpen, setIsUserCompModalOpen,
     selectedUser, accessForm, setAccessForm, userCompForm, companySearch, setCompanySearch,
     isSavingAccess, isSavingUserComp, renamingUser, setRenamingUser,
