@@ -47,6 +47,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./ui/popover";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 export default function EducatorClient() {
   const { data: session } = useSession();
@@ -324,45 +327,39 @@ export default function EducatorClient() {
 
             {/* Feedback removed - using toast */}
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Empresa</label>
-              <select
-                className="w-full bg-muted/30 border-none rounded-xl px-4 py-3 text-xs font-bold appearance-none cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all"
-                value={bulkCompany}
-                onChange={(e) => {
-                  setBulkCompany(e.target.value);
-                  setBulkSector('');
-                  loadSectors(e.target.value);
-                }}
-              >
-                <option value="">Selecione a empresa...</option>
-                {companies.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Empresa</Label>
+              <Select value={bulkCompany} onValueChange={v => { setBulkCompany(v); setBulkSector(''); loadSectors(v); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Setor</label>
-              <select
-                className="w-full bg-muted/30 border-none rounded-xl px-4 py-3 text-xs font-bold appearance-none cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50"
-                value={bulkSector}
-                onChange={(e) => setBulkSector(e.target.value)}
-                disabled={!bulkCompany}
-              >
-                <option value="">Selecione o setor...</option>
-                {sectors.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Setor</Label>
+              <Select value={bulkSector} onValueChange={setBulkSector} disabled={!bulkCompany}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o setor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectors.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2 pt-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Lista de Funcionários</label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Lista de Funcionários</Label>
                 <span className="text-[9px] text-muted-foreground font-medium">Nome completo</span>
               </div>
               {bulkNames.map((name, idx) => (
                 <div key={idx} className="relative group">
-                  <input
+                  <Input
                     placeholder={`Funcionário ${idx + 1}`}
-                    className="w-full bg-muted/30 border-none rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-primary/20 transition-all placeholder:font-medium"
                     value={name}
                     onChange={(e) => {
                       const newNames = [...bulkNames];
@@ -528,8 +525,8 @@ export default function EducatorClient() {
                         >
                           {editingEmployee?.id === emp.id ? (
                             <div className="w-full flex items-center gap-2 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border border-primary bg-background shadow-lg z-10">
-                              <input
-                                className="flex-1 bg-transparent border-none text-sm font-bold focus:ring-0 px-0 py-0"
+                              <Input
+                                className="flex-1 border-none shadow-none bg-transparent text-sm font-bold focus-visible:ring-0 px-0 py-0 h-auto"
                                 autoFocus
                                 value={editingEmployee?.name || ''}
                                 onChange={(e) => setEditingEmployee(prev => prev ? { ...prev, name: e.target.value } : null)}

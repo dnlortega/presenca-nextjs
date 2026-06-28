@@ -60,6 +60,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Checkbox } from "./ui/checkbox";
 import { fetchNoCache } from "../lib/fetch-helpers";
 import CompanyDistributionChart from "./CompanyDistributionChart";
 
@@ -250,6 +256,16 @@ export default function AdminClient() {
   const [demoMode, setDemoMode] = useState<boolean | null>(null);
   const [togglingDemo, setTogglingDemo] = useState(false);
   const [renamingUser, setRenamingUser] = useState<{ id: number; value: string } | null>(null);
+  const [isSavingEmp, setIsSavingEmp] = useState(false);
+  const [isSavingComp, setIsSavingComp] = useState(false);
+  const [isSavingSector, setIsSavingSector] = useState(false);
+  const [isSavingAccess, setIsSavingAccess] = useState(false);
+  const [isSavingUserComp, setIsSavingUserComp] = useState(false);
+  const [empFormErrors, setEmpFormErrors] = useState<Record<string, string>>({});
+  const [compFormErrors, setCompFormErrors] = useState<Record<string, string>>({});
+  const [sectorFormErrors, setSectorFormErrors] = useState<Record<string, string>>({});
+  const [auditFilter, setAuditFilter] = useState({ action: '', user: '', startDate: '', endDate: '' });
+  const [companySearch, setCompanySearch] = useState('');
 
   const isSuperAdmin = session?.user?.email === 'dnlortega@gmail.com';
 
@@ -346,10 +362,15 @@ export default function AdminClient() {
     setIsLoadingReports(false);
   };
 
-  const loadAuditLogs = async (page = 1) => {
+  const loadAuditLogs = async (page = 1, filter = auditFilter) => {
     setIsLoadingAudit(true);
     try {
-      const res = await fetchNoCache(`/api/admin/audit-log?page=${page}&limit=${AUDIT_PER_PAGE}`);
+      const params = new URLSearchParams({ page: String(page), limit: String(AUDIT_PER_PAGE) });
+      if (filter.action) params.set('action', filter.action);
+      if (filter.user) params.set('user', filter.user);
+      if (filter.startDate) params.set('startDate', filter.startDate);
+      if (filter.endDate) params.set('endDate', filter.endDate);
+      const res = await fetchNoCache(`/api/admin/audit-log?${params}`);
       const data = await res.json();
       if (res.ok) {
         setAuditLogs(data.data);
@@ -493,6 +514,7 @@ export default function AdminClient() {
     e.preventDefault();
     if (!selectedUser) return;
     const prev = users;
+    setIsSavingUserComp(true);
     setUsers(users.map(u => u.id === selectedUser.id ? { ...u, empresas: userCompForm } : u));
     setIsUserCompModalOpen(false);
     try {
@@ -501,8 +523,10 @@ export default function AdminClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ empresas: userCompForm }),
       });
-      if (!res.ok) { setUsers(prev); toast.error('Erro ao atualizar empresas'); }
+      if (res.ok) { toast.success('Acessos atualizados'); }
+      else { setUsers(prev); toast.error('Erro ao atualizar empresas'); }
     } catch (e) { setUsers(prev); console.error(e); }
+    setIsSavingUserComp(false);
   };
 
   const openUserCompModal = (user: User) => {
@@ -525,6 +549,7 @@ export default function AdminClient() {
     e.preventDefault();
     if (!selectedUser) return;
     const prev = users;
+    setIsSavingAccess(true);
     setUsers(users.map(u => u.id === selectedUser.id
       ? { ...u, can_register: accessForm.can_register, can_edit: accessForm.can_edit }
       : u));
@@ -542,7 +567,9 @@ export default function AdminClient() {
           body: JSON.stringify({ can_edit: accessForm.can_edit }),
         })
       ]);
+      toast.success('Permissões salvas');
     } catch (e) { setUsers(prev); console.error(e); }
+    setIsSavingAccess(false);
   };
 
   const toggleCompany = (companyName: string) => {
@@ -562,29 +589,33 @@ export default function AdminClient() {
 
   const handleSaveEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (!empForm.nome.trim()) errors.nome = 'Nome é obrigatório';
+    if (!empForm.empresa_id) errors.empresa_id = 'Selecione a empresa';
+    if (!empForm.setor_id) errors.setor_id = 'Selecione o setor';
+    if (Object.keys(errors).length > 0) { setEmpFormErrors(errors); return; }
+    setEmpFormErrors({});
+    setIsSavingEmp(true);
     try {
       const url = editingEmp ? `/api/admin/employees/${editingEmp.id}` : '/api/admin/employees';
       const method = editingEmp ? 'PUT' : 'POST';
-
       const res = await fetchNoCache(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: empForm.nome,
-          empresa_id: Number(empForm.empresa_id),
-          setor_id: Number(empForm.setor_id)
-        }),
+        body: JSON.stringify({ nome: empForm.nome, empresa_id: Number(empForm.empresa_id), setor_id: Number(empForm.setor_id) }),
       });
-
       if (res.ok) {
         setIsEmpModalOpen(false);
         setEditingEmp(null);
         setEmpForm({ nome: '', empresa_id: '', setor_id: '' });
         loadEmployees();
+        toast.success(editingEmp ? 'Funcionário atualizado' : 'Funcionário cadastrado');
       } else {
-        alert('Erro ao salvar');
+        const d = await res.json();
+        toast.error(d.error || 'Erro ao salvar');
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); toast.error('Erro de conexão'); }
+    setIsSavingEmp(false);
   };
 
   const handleDeleteEmployee = async (id: number) => {
@@ -597,26 +628,27 @@ export default function AdminClient() {
 
   const handleSaveCompany = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (!compForm.nome.trim()) errors.nome = 'Nome é obrigatório';
+    if (Object.keys(errors).length > 0) { setCompFormErrors(errors); return; }
+    setCompFormErrors({});
+    setIsSavingComp(true);
     try {
       const url = editingComp ? `/api/admin/companies/${editingComp.id}` : '/api/admin/companies';
       const method = editingComp ? 'PUT' : 'POST';
-
-      const res = await fetchNoCache(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(compForm),
-      });
-
+      const res = await fetchNoCache(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(compForm) });
       if (res.ok) {
         setIsCompModalOpen(false);
         setEditingComp(null);
         setCompForm({ nome: '' });
         loadCompanies();
+        toast.success(editingComp ? 'Empresa atualizada' : 'Empresa cadastrada');
       } else {
-        const error = await res.json();
-        alert(error.error || 'Erro ao salvar');
+        const d = await res.json();
+        toast.error(d.error || 'Erro ao salvar');
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); toast.error('Erro de conexão'); }
+    setIsSavingComp(false);
   };
 
   const handleDeleteCompany = async (id: number) => {
@@ -669,72 +701,56 @@ export default function AdminClient() {
 
   const handleSaveSector = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (!sectorForm.nome.trim()) errors.nome = 'Nome é obrigatório';
+    if (!sectorForm.empresa_id) errors.empresa_id = 'Selecione a empresa';
+    if (Object.keys(errors).length > 0) { setSectorFormErrors(errors); return; }
+    setSectorFormErrors({});
+    setIsSavingSector(true);
     try {
       if (editingSector) {
-        // Validação de duplicidade local para edição
         const isDuplicate = sectors.some(s =>
           s.nome.toLowerCase() === sectorForm.nome.toLowerCase() &&
           s.empresa_id === Number(sectorForm.empresa_id) &&
           s.id !== editingSector.id
         );
-
-        if (isDuplicate) {
-          alert('Já existe um setor com este nome nesta empresa!');
-          return;
-        }
-
+        if (isDuplicate) { toast.error('Já existe um setor com este nome nesta empresa!'); setIsSavingSector(false); return; }
         const res = await fetchNoCache(`/api/admin/sectors/${editingSector.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nome: sectorForm.nome,
-            empresa_id: Number(sectorForm.empresa_id)
-          }),
+          body: JSON.stringify({ nome: sectorForm.nome, empresa_id: Number(sectorForm.empresa_id) }),
         });
-
         if (res.ok) {
           setIsSectorModalOpen(false);
           setEditingSector(null);
           setSectorForm({ nome: '', empresa_id: '' });
           loadSectors();
+          toast.success('Setor atualizado');
         } else {
-          const errorData = await res.json();
-          alert(errorData.error || 'Erro ao editar setor');
+          const d = await res.json();
+          toast.error(d.error || 'Erro ao editar setor');
         }
       } else {
-        // Bulk Creation Logic
         const nomes = sectorForm.nome.split('\n').map(n => n.trim()).filter(n => n.length > 0);
-
-        if (nomes.length === 0) {
-          alert('Digite pelo menos um nome de setor.');
-          return;
-        }
-
+        if (nomes.length === 0) { toast.error('Digite pelo menos um nome de setor.'); setIsSavingSector(false); return; }
         const res = await fetchNoCache('/api/admin/sectors', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nomes,
-            empresa_id: Number(sectorForm.empresa_id)
-          }),
+          body: JSON.stringify({ nomes, empresa_id: Number(sectorForm.empresa_id) }),
         });
-
         const data = await res.json();
-
         if (res.ok) {
           setIsSectorModalOpen(false);
           setEditingSector(null);
           setSectorForm({ nome: '', empresa_id: '' });
           loadSectors();
-          if (data.message) alert(data.message);
+          toast.success(data.message || 'Setores criados');
         } else {
-          alert(data.error || 'Erro ao criar setores');
+          toast.error(data.error || 'Erro ao criar setores');
         }
       }
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao salvar setor. Tente novamente.');
-    }
+    } catch (err) { console.error(err); toast.error('Erro ao salvar setor. Tente novamente.'); }
+    setIsSavingSector(false);
   };
 
   const handleDeleteSector = async (id: number) => {
@@ -2215,7 +2231,7 @@ export default function AdminClient() {
               <div className="flex gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={() => loadAuditLogs(1)} size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0">
+                    <Button onClick={() => loadAuditLogs(1, auditFilter)} size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0">
                       <LucideClock className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
@@ -2250,6 +2266,73 @@ export default function AdminClient() {
                 </Tooltip>
               </div>
             </header>
+
+            {/* Filtros de auditoria */}
+            <Card className="border-none shadow-sm bg-card/40">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-1 min-w-[130px]">
+                    <Label className="text-[10px] font-black text-muted-foreground whitespace-nowrap">Ação</Label>
+                    <Select value={auditFilter.action} onValueChange={v => setAuditFilter(f => ({ ...f, action: v === '_all' ? '' : v }))}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Todas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_all">Todas</SelectItem>
+                        <SelectItem value="CREATE">Criou</SelectItem>
+                        <SelectItem value="UPDATE">Editou</SelectItem>
+                        <SelectItem value="DELETE">Excluiu</SelectItem>
+                        <SelectItem value="UPDATE_ROLE">Alterou cargo</SelectItem>
+                        <SelectItem value="UPDATE_PERMISSION">Alterou permissão</SelectItem>
+                        <SelectItem value="LOGIN">Login</SelectItem>
+                        <SelectItem value="LOGOUT">Logout</SelectItem>
+                        <SelectItem value="FORCE_LOGOUT">Sessão encerrada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-[130px]">
+                    <Label className="text-[10px] font-black text-muted-foreground whitespace-nowrap">Usuário</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      placeholder="Filtrar usuário..."
+                      value={auditFilter.user}
+                      onChange={e => setAuditFilter(f => ({ ...f, user: e.target.value }))}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-[130px]">
+                    <Label className="text-[10px] font-black text-muted-foreground whitespace-nowrap">De</Label>
+                    <Input type="date" className="h-8 text-xs" value={auditFilter.startDate} onChange={e => setAuditFilter(f => ({ ...f, startDate: e.target.value }))} />
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 min-w-[130px]">
+                    <Label className="text-[10px] font-black text-muted-foreground whitespace-nowrap">Até</Label>
+                    <Input type="date" className="h-8 text-xs" value={auditFilter.endDate} onChange={e => setAuditFilter(f => ({ ...f, endDate: e.target.value }))} />
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" className="h-8 w-8 rounded-lg" onClick={() => loadAuditLogs(1, auditFilter)}>
+                          <LucideFilter className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Filtrar</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => {
+                          const empty = { action: '', user: '', startDate: '', endDate: '' };
+                          setAuditFilter(empty);
+                          loadAuditLogs(1, empty);
+                        }}>
+                          <LucideX className="w-3.5 h-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Limpar filtros</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+                {auditTotal > 0 && <p className="text-[10px] text-muted-foreground mt-3 font-bold">{auditTotal} registros encontrados</p>}
+              </CardContent>
+            </Card>
 
             {(() => {
               const actionLabel: Record<string, string> = {
@@ -2719,269 +2802,235 @@ export default function AdminClient() {
         </div>
       </main>
 
-      {/* Employee Modal (Briefly styled for now) */}
       {/* Employee Modal */}
-      {isEmpModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <LucideUser className="w-5 h-5 text-primary" />
-                {editingEmp ? 'Editar Funcionário' : 'Novo Registro'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveEmployee} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nome Completo</label>
-                  <input
-                    required
-                    className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                    value={empForm.nome}
-                    onChange={e => setEmpForm({ ...empForm, nome: e.target.value })}
-                    placeholder="Nome do colaborador"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Empresa</label>
-                    <select
-                      required
-                      className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer font-bold"
-                      value={empForm.empresa_id}
-                      onChange={e => setEmpForm({ ...empForm, empresa_id: e.target.value, setor_id: '' })}
-                    >
-                      <option value="" disabled>Selecione a empresa</option>
-                      {companies.map(c => (
-                        <option key={c.id} value={c.id}>{c.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Setor</label>
-                    <select
-                      required
-                      className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                      value={empForm.setor_id}
-                      onChange={e => setEmpForm({ ...empForm, setor_id: e.target.value })}
-                      disabled={!empForm.empresa_id}
-                    >
-                      <option value="" disabled>
-                        {!empForm.empresa_id ? 'Selecione a empresa primeiro' : 'Selecione o setor'}
-                      </option>
-                      {sectors
-                        .filter(s => s.empresa_id === Number(empForm.empresa_id))
-                        .map(s => (
-                          <option key={s.id} value={s.id}>{s.nome}</option>
-                        ))}
-                    </select>
-                  </div>
-
-                </div>
-
-                <div className="flex justify-end gap-2 pt-6">
-                  <Button variant="ghost" type="button" onClick={() => setIsEmpModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
-                  <Button type="submit" className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">Confirmar</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Dialog open={isEmpModalOpen} onOpenChange={open => { if (!open) { setIsEmpModalOpen(false); setEmpFormErrors({}); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LucideUser className="w-5 h-5 text-primary" />
+              {editingEmp ? 'Editar Funcionário' : 'Novo Funcionário'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveEmployee} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">Nome Completo</Label>
+              <Input
+                value={empForm.nome}
+                onChange={e => { setEmpForm({ ...empForm, nome: e.target.value }); if (empFormErrors.nome) setEmpFormErrors(p => ({ ...p, nome: '' })); }}
+                placeholder="Nome do colaborador"
+                className={empFormErrors.nome ? 'border-destructive focus-visible:ring-destructive' : ''}
+              />
+              {empFormErrors.nome && <p className="text-[11px] text-destructive">{empFormErrors.nome}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">Empresa</Label>
+              <Select value={empForm.empresa_id} onValueChange={v => { setEmpForm({ ...empForm, empresa_id: v, setor_id: '' }); if (empFormErrors.empresa_id) setEmpFormErrors(p => ({ ...p, empresa_id: '' })); }}>
+                <SelectTrigger className={empFormErrors.empresa_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {empFormErrors.empresa_id && <p className="text-[11px] text-destructive">{empFormErrors.empresa_id}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">Setor</Label>
+              <Select value={empForm.setor_id} onValueChange={v => { setEmpForm({ ...empForm, setor_id: v }); if (empFormErrors.setor_id) setEmpFormErrors(p => ({ ...p, setor_id: '' })); }} disabled={!empForm.empresa_id}>
+                <SelectTrigger className={empFormErrors.setor_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder={!empForm.empresa_id ? 'Selecione a empresa primeiro' : 'Selecione o setor'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectors.filter(s => s.empresa_id === Number(empForm.empresa_id)).map(s => <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {empFormErrors.setor_id && <p className="text-[11px] text-destructive">{empFormErrors.setor_id}</p>}
+            </div>
+            <DialogFooter className="pt-2">
+              <Button variant="ghost" type="button" onClick={() => { setIsEmpModalOpen(false); setEmpFormErrors({}); }}>Cancelar</Button>
+              <Button type="submit" disabled={isSavingEmp} className="shadow-lg shadow-primary/20">
+                {isSavingEmp ? <div className="animate-spin w-4 h-4 border-2 border-background/30 border-t-background rounded-full" /> : 'Confirmar'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Sector Modal */}
-      {isSectorModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <LucideLayers className="w-5 h-5 text-primary" />
-                {editingSector ? 'Editar Setor' : 'Novo Setor'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveSector} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">
-                    {editingSector ? 'Nome do Setor' : 'Nomes dos Setores (um por linha)'}
-                  </label>
-                  {editingSector ? (
-                    <input
-                      required
-                      className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                      value={sectorForm.nome}
-                      onChange={e => setSectorForm({ ...sectorForm, nome: e.target.value })}
-                      placeholder="Ex: Recursos Humanos"
-                    />
-                  ) : (
-                    <textarea
-                      required
-                      rows={5}
-                      className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold resize-none"
-                      value={sectorForm.nome}
-                      onChange={e => setSectorForm({ ...sectorForm, nome: e.target.value })}
-                      placeholder={"Ex:\nRecursos Humanos\nTI\nFinanceiro\nOperacional"}
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Vincular à Empresa</label>
-                  <select
-                    required
-                    className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer font-bold"
-                    value={sectorForm.empresa_id}
-                    onChange={e => setSectorForm({ ...sectorForm, empresa_id: e.target.value })}
-                  >
-                    <option value="" disabled>Selecione a empresa</option>
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-6">
-                  <Button variant="ghost" type="button" onClick={() => setIsSectorModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
-                  <Button type="submit" className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">Salvar Setor</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Dialog open={isSectorModalOpen} onOpenChange={open => { if (!open) { setIsSectorModalOpen(false); setSectorFormErrors({}); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LucideLayers className="w-5 h-5 text-primary" />
+              {editingSector ? 'Editar Setor' : 'Novo Setor'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveSector} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">
+                {editingSector ? 'Nome do Setor' : 'Nomes dos Setores (um por linha)'}
+              </Label>
+              {editingSector ? (
+                <Input
+                  value={sectorForm.nome}
+                  onChange={e => { setSectorForm({ ...sectorForm, nome: e.target.value }); if (sectorFormErrors.nome) setSectorFormErrors(p => ({ ...p, nome: '' })); }}
+                  placeholder="Ex: Recursos Humanos"
+                  className={sectorFormErrors.nome ? 'border-destructive focus-visible:ring-destructive' : ''}
+                />
+              ) : (
+                <Textarea
+                  rows={5}
+                  value={sectorForm.nome}
+                  onChange={e => { setSectorForm({ ...sectorForm, nome: e.target.value }); if (sectorFormErrors.nome) setSectorFormErrors(p => ({ ...p, nome: '' })); }}
+                  placeholder={"Ex:\nRecursos Humanos\nTI\nFinanceiro\nOperacional"}
+                  className={`resize-none ${sectorFormErrors.nome ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                />
+              )}
+              {sectorFormErrors.nome && <p className="text-[11px] text-destructive">{sectorFormErrors.nome}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">Vincular à Empresa</Label>
+              <Select value={sectorForm.empresa_id} onValueChange={v => { setSectorForm({ ...sectorForm, empresa_id: v }); if (sectorFormErrors.empresa_id) setSectorFormErrors(p => ({ ...p, empresa_id: '' })); }}>
+                <SelectTrigger className={sectorFormErrors.empresa_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {sectorFormErrors.empresa_id && <p className="text-[11px] text-destructive">{sectorFormErrors.empresa_id}</p>}
+            </div>
+            <DialogFooter className="pt-2">
+              <Button variant="ghost" type="button" onClick={() => { setIsSectorModalOpen(false); setSectorFormErrors({}); }}>Cancelar</Button>
+              <Button type="submit" disabled={isSavingSector} className="shadow-lg shadow-primary/20">
+                {isSavingSector ? <div className="animate-spin w-4 h-4 border-2 border-background/30 border-t-background rounded-full" /> : 'Salvar Setor'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Company Modal */}
-      {isCompModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <LucideBuilding className="w-5 h-5 text-primary" />
-                {editingComp ? 'Editar Empresa' : 'Nova Empresa'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveCompany} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nome da Empresa</label>
-                  <input
-                    required
-                    className="w-full bg-muted/30 border-none rounded-lg px-4 py-2.5 text-xs focus:ring-2 focus:ring-primary/20 transition-all font-bold"
-                    value={compForm.nome}
-                    onChange={e => setCompForm({ nome: e.target.value })}
-                    placeholder="Ex: Minha Empresa LTDA"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-6">
-                  <Button variant="ghost" type="button" onClick={() => setIsCompModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
-                  <Button type="submit" className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">Confirmar</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <Dialog open={isCompModalOpen} onOpenChange={open => { if (!open) { setIsCompModalOpen(false); setCompFormErrors({}); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LucideBuilding className="w-5 h-5 text-primary" />
+              {editingComp ? 'Editar Empresa' : 'Nova Empresa'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveCompany} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest">Nome da Empresa</Label>
+              <Input
+                value={compForm.nome}
+                onChange={e => { setCompForm({ nome: e.target.value }); if (compFormErrors.nome) setCompFormErrors(p => ({ ...p, nome: '' })); }}
+                placeholder="Ex: Minha Empresa LTDA"
+                className={compFormErrors.nome ? 'border-destructive focus-visible:ring-destructive' : ''}
+              />
+              {compFormErrors.nome && <p className="text-[11px] text-destructive">{compFormErrors.nome}</p>}
+            </div>
+            <DialogFooter className="pt-2">
+              <Button variant="ghost" type="button" onClick={() => { setIsCompModalOpen(false); setCompFormErrors({}); }}>Cancelar</Button>
+              <Button type="submit" disabled={isSavingComp} className="shadow-lg shadow-primary/20">
+                {isSavingComp ? <div className="animate-spin w-4 h-4 border-2 border-background/30 border-t-background rounded-full" /> : 'Confirmar'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* User Companies Modal */}
-      {isUserCompModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in my-auto">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <LucideShieldCheck className="w-5 h-5 text-primary" />
-                Controle de Acessos
-              </CardTitle>
-              <CardDescription className="text-xs font-medium">Permissões de empresa para <b>{selectedUser?.username}</b>.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                {companies.map(comp => (
-                  <label key={comp.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 cursor-pointer transition-all group active:scale-95">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded-md border-muted text-primary focus:ring-primary transition-all cursor-pointer"
-                      checked={userCompForm.includes(comp.nome)}
-                      onChange={() => toggleUserCompany(comp.nome)}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold group-hover:text-primary transition-colors">{comp.nome}</span>
-                      <span className="text-[9px] text-muted-foreground uppercase font-black opacity-50">ID: {comp.id}</span>
-                    </div>
-                  </label>
-                ))}
-                {companies.length === 0 && (
-                  <div className="py-8 text-center text-muted-foreground text-xs italic bg-muted/20 rounded-xl border border-dashed">
-                    Nenhuma empresa disponível.
+      <Dialog open={isUserCompModalOpen} onOpenChange={open => { if (!open) { setIsUserCompModalOpen(false); setCompanySearch(''); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LucideShieldCheck className="w-5 h-5 text-primary" />
+              Controle de Acessos
+            </DialogTitle>
+            <DialogDescription>Permissões de empresa para <b>{selectedUser?.username}</b>.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="relative">
+              <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                className="pl-8 h-8 text-xs"
+                placeholder="Buscar empresa..."
+                value={companySearch}
+                onChange={e => setCompanySearch(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {companies.filter(c => c.nome.toLowerCase().includes(companySearch.toLowerCase())).map(comp => (
+                <label key={comp.id} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 cursor-pointer transition-all group active:scale-95">
+                  <Checkbox
+                    checked={userCompForm.includes(comp.nome)}
+                    onCheckedChange={() => toggleUserCompany(comp.nome)}
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold group-hover:text-primary transition-colors">{comp.nome}</span>
+                    <span className="text-[9px] text-muted-foreground uppercase font-black opacity-50">ID: {comp.id}</span>
                   </div>
-                )}
-              </div>
-              <div className="flex justify-end gap-2 pt-6 border-t border-border mt-4">
-                <Button variant="ghost" type="button" onClick={() => setIsUserCompModalOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
-                <Button onClick={updateUserCompanies} className="rounded-xl font-bold px-6 shadow-lg shadow-primary/20">Salvar Acessos</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                </label>
+              ))}
+              {companies.length === 0 && (
+                <div className="py-8 text-center text-muted-foreground text-xs italic bg-muted/20 rounded-xl border border-dashed">
+                  Nenhuma empresa disponível.
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="pt-2 border-t border-border">
+            <Button variant="ghost" type="button" onClick={() => { setIsUserCompModalOpen(false); setCompanySearch(''); }}>Cancelar</Button>
+            <Button onClick={updateUserCompanies} disabled={isSavingUserComp} className="shadow-lg shadow-primary/20">
+              {isSavingUserComp ? <div className="animate-spin w-4 h-4 border-2 border-background/30 border-t-background rounded-full" /> : 'Salvar Acessos'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Access Management Modal */}
-      {isAccessModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-sm shadow-2xl border-border animate-scale-in">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <LucideShieldCheck className="w-5 h-5 text-emerald-500" />
-                Permissões de Educador
-              </CardTitle>
-              <CardDescription>
-                Configure o que <b>{selectedUser?.username}</b> pode fazer.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveAccess} className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
-                    <div className="space-y-0.5">
-                      <label className="text-sm font-bold block">Cadastrar Funcionários</label>
-                      <span className="text-xs text-muted-foreground">Adicionar novos nomes aos setores</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 accent-primary rounded cursor-pointer"
-                      checked={accessForm.can_register}
-                      onChange={e => setAccessForm({ ...accessForm, can_register: e.target.checked })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
-                    <div className="space-y-0.5">
-                      <label className="text-sm font-bold block">Editar Nomes</label>
-                      <span className="text-xs text-muted-foreground">Corrigir nomes de funcionários</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 accent-primary rounded cursor-pointer"
-                      checked={accessForm.can_edit}
-                      onChange={e => setAccessForm({ ...accessForm, can_edit: e.target.checked })}
-                    />
-                  </div>
+      <Dialog open={isAccessModalOpen} onOpenChange={open => { if (!open) setIsAccessModalOpen(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LucideShieldCheck className="w-5 h-5 text-emerald-500" />
+              Permissões de Educador
+            </DialogTitle>
+            <DialogDescription>Configure o que <b>{selectedUser?.username}</b> pode fazer.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSaveAccess} className="space-y-4 pt-2">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold">Cadastrar Funcionários</Label>
+                  <p className="text-xs text-muted-foreground">Adicionar novos nomes aos setores</p>
                 </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button type="button" variant="ghost" onClick={() => setIsAccessModalOpen(false)} className="flex-1 font-bold rounded-xl">
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="flex-1 font-bold rounded-xl shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-700">
-                    Salvar Acessos
-                  </Button>
+                <Checkbox
+                  checked={accessForm.can_register}
+                  onCheckedChange={v => setAccessForm({ ...accessForm, can_register: !!v })}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-muted/20">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold">Editar Nomes</Label>
+                  <p className="text-xs text-muted-foreground">Corrigir nomes de funcionários</p>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                <Checkbox
+                  checked={accessForm.can_edit}
+                  onCheckedChange={v => setAccessForm({ ...accessForm, can_edit: !!v })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setIsAccessModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isSavingAccess} className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20">
+                {isSavingAccess ? <div className="animate-spin w-4 h-4 border-2 border-background/30 border-t-background rounded-full" /> : 'Salvar Acessos'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
     </TooltipProvider>
   );
