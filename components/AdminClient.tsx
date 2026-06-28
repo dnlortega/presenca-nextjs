@@ -3,45 +3,45 @@
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  LucideUsers,
-  LucideBarChart,
-  LucideFileText,
-  LucideSettings,
-  LucideLogOut,
-  LucideLayoutDashboard,
-  LucidePlus,
-  LucideEdit,
-  LucideTrash,
-  LucideChevronRight,
-  LucideChevronDown,
-  LucideSearch,
-  LucideShieldCheck,
-  LucideUserCheck,
-  LucideClock,
-  LucideMail,
-  LucideBuilding,
-  LucidePanelLeftClose,
-  LucidePanelLeftOpen,
-  LucideUser,
-  LucideLayers,
-  LucideAlertCircle,
-  LucideX,
-  LucideMenu,
-  LucideInfo,
-  LucideCode2,
-  LucideZap,
-  LucideTrash2,
-  LucideTrendingUp,
-  LucideClipboardList,
-  LucideFilter,
-  LucidePercent,
-  LucideSun,
-  LucideMoon,
-  LucideMonitor,
-  LucideKey,
-  LucideUserX,
-  LucideUserPlus,
-  LucideBuilding2
+  Users,
+  BarChart as BarChartIcon,
+  FileText,
+  Settings,
+  LogOut,
+  LayoutDashboard,
+  Plus,
+  Edit,
+  Trash,
+  ChevronRight,
+  ChevronDown,
+  Search,
+  ShieldCheck,
+  UserCheck,
+  Clock,
+  Mail,
+  Building,
+  PanelLeftClose,
+  PanelLeftOpen,
+  User,
+  Layers,
+  AlertCircle,
+  X,
+  Menu,
+  Info,
+  Code2,
+  Zap,
+  Trash2,
+  TrendingUp,
+  ClipboardList,
+  Filter,
+  Percent,
+  Sun,
+  Moon,
+  Monitor,
+  Key,
+  UserX,
+  UserPlus,
+  Building2
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useSession, signOut } from 'next-auth/react';
@@ -175,7 +175,7 @@ function ConfirmAction({
         <div className="space-y-4">
           <div className="space-y-2">
             <h4 className="font-black uppercase tracking-tighter text-sm flex items-center gap-2">
-              <LucideAlertCircle className="w-4 h-4 text-destructive" />
+              <AlertCircle className="w-4 h-4 text-destructive" />
               {title}
             </h4>
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest leading-relaxed">
@@ -800,12 +800,12 @@ export default function AdminClient() {
             {dashboardError && (
               <Card className="border-destructive/50 bg-destructive/10 shrink-0">
                 <CardContent className="p-3 flex items-center gap-2 text-destructive text-xs">
-                  <LucideAlertCircle className="w-4 h-4" />
+                  <AlertCircle className="w-4 h-4" />
                   <span>{dashboardError}</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="icon" variant="ghost" onClick={loadDashboard} className="ml-auto h-7 w-7">
-                        <LucideClock className="w-3.5 h-3.5" />
+                        <Clock className="w-3.5 h-3.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Tentar novamente</TooltipContent>
@@ -817,10 +817,10 @@ export default function AdminClient() {
             {/* KPI Cards */}
             <section className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
               {[
-                { label: 'Presenças hoje', value: dashboardData?.totalToday ?? 0, sub: 'registradas hoje', icon: LucideUsers, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                { label: 'Taxa de presença', value: isLoadingDashboard ? '—' : `${attendanceRate}%`, sub: `${dashboardData?.totalToday ?? 0} de ${dashboardData?.totalEmployees ?? 0}`, icon: LucidePercent, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                { label: 'Setores ativos', value: dashboardData?.sectorsActive ?? 0, sub: 'com presença hoje', icon: LucideBarChart, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                { label: 'Funcionários', value: dashboardData?.totalEmployees ?? 0, sub: 'cadastrados', icon: LucideUsers, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                { label: 'Presenças hoje', value: dashboardData?.totalToday ?? 0, sub: 'registradas hoje', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                { label: 'Taxa de presença', value: isLoadingDashboard ? '—' : `${attendanceRate}%`, sub: `${dashboardData?.totalToday ?? 0} de ${dashboardData?.totalEmployees ?? 0}`, icon: Percent, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { label: 'Setores ativos', value: dashboardData?.sectorsActive ?? 0, sub: 'com presença hoje', icon: BarChart, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+                { label: 'Funcionários', value: dashboardData?.totalEmployees ?? 0, sub: 'cadastrados', icon: Users, color: 'text-purple-500', bg: 'bg-purple-500/10' },
               ].map(({ label, value, sub, icon: Icon, color, bg }) => (
                 <Card key={label} className="border-none shadow-sm">
                   <CardContent className="p-3">
@@ -852,7 +852,7 @@ export default function AdminClient() {
                   <Card className="lg:col-span-2 border-none shadow-sm">
                     <CardHeader className="py-3 px-4">
                       <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                        <LucideClock className="w-3.5 h-3.5 text-amber-500" /> Horário de pico
+                        <Clock className="w-3.5 h-3.5 text-amber-500" /> Horário de pico
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
@@ -920,7 +920,7 @@ export default function AdminClient() {
                 <Card className="border-none shadow-sm h-full">
                   <CardHeader className="py-3 px-4">
                     <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                      <LucideTrendingUp className="w-3.5 h-3.5 text-primary" /> Tendência dos últimos 7 dias
+                      <TrendingUp className="w-3.5 h-3.5 text-primary" /> Tendência dos últimos 7 dias
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
@@ -948,7 +948,7 @@ export default function AdminClient() {
                   <Card className="lg:col-span-2 border-none shadow-sm">
                     <CardHeader className="py-3 px-4">
                       <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                        <LucideBuilding className="w-3.5 h-3.5 text-indigo-500" /> Por empresa
+                        <Building className="w-3.5 h-3.5 text-indigo-500" /> Por empresa
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
@@ -972,7 +972,7 @@ export default function AdminClient() {
                     <Card className="border-none shadow-sm flex-1">
                       <CardHeader className="py-3 px-4">
                         <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                          <LucideLayers className="w-3.5 h-3.5 text-rose-500" /> Setores
+                          <Layers className="w-3.5 h-3.5 text-rose-500" /> Setores
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="px-4 pb-3">
@@ -995,7 +995,7 @@ export default function AdminClient() {
                     <Card className="border-none shadow-sm flex-1">
                       <CardHeader className="py-3 px-4">
                         <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                          <LucideAlertCircle className="w-3.5 h-3.5 text-rose-500" /> Menos presenças
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500" /> Menos presenças
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="px-4 pb-3 space-y-1.5">
@@ -1017,7 +1017,7 @@ export default function AdminClient() {
                   <Card className="lg:col-span-3 border-none shadow-sm">
                     <CardHeader className="py-3 px-4">
                       <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                        <LucideBarChart className="w-3.5 h-3.5 text-teal-500" /> Mapa de presença
+                        <BarChartIcon className="w-3.5 h-3.5 text-teal-500" /> Mapa de presença
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="px-4 pb-4">
@@ -1065,7 +1065,7 @@ export default function AdminClient() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <div className="relative w-full sm:w-auto">
-                    <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Buscar Empresa..."
@@ -1077,7 +1077,7 @@ export default function AdminClient() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="icon" onClick={() => openCompModal()} className="rounded-xl shadow-lg shadow-primary/20 shrink-0">
-                        <LucidePlus className="w-4 h-4" />
+                        <Plus className="w-4 h-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Nova Empresa</TooltipContent>
@@ -1117,7 +1117,7 @@ export default function AdminClient() {
                                       setIsSectorModalOpen(true);
                                     }}
                                   >
-                                    <LucidePlus className="w-3 h-3" />
+                                    <Plus className="w-3 h-3" />
                                   </Button>
                                 </div>
 
@@ -1141,14 +1141,14 @@ export default function AdminClient() {
                                                   className="h-6 w-6 rounded-md hover:bg-primary/20 hover:text-primary transition-all flex items-center justify-center"
                                                   title="Editar Setor"
                                                 >
-                                                  <LucideEdit className="w-3 h-3" />
+                                                  <Edit className="w-3 h-3" />
                                                 </button>
                                                 <ConfirmAction onConfirm={() => handleDeleteSector(s.id)} title="Excluir Setor?">
                                                   <button
                                                     className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
                                                     title="Excluir Setor"
                                                   >
-                                                    <LucideTrash className="w-3 h-3" />
+                                                    <Trash className="w-3 h-3" />
                                                   </button>
                                                 </ConfirmAction>
                                               </div>
@@ -1160,7 +1160,7 @@ export default function AdminClient() {
                                   </div>
                                 ) : (
                                   <div className="py-6 text-center border border-dashed border-border/50 rounded-lg bg-muted/10">
-                                    <LucideLayers className="w-6 h-6 mx-auto mb-1 opacity-20" />
+                                    <Layers className="w-6 h-6 mx-auto mb-1 opacity-20" />
                                     <span className="text-[9px] text-muted-foreground italic font-medium block">Nenhum setor cadastrado</span>
                                   </div>
                                 )}
@@ -1169,11 +1169,11 @@ export default function AdminClient() {
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-lg" onClick={() => openCompModal(comp)}>
-                                  <LucideEdit className="w-3.5 h-3.5" />
+                                  <Edit className="w-3.5 h-3.5" />
                                 </Button>
                                 <ConfirmAction onConfirm={() => handleDeleteCompany(comp.id)} title="Excluir Empresa?">
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg">
-                                    <LucideTrash className="w-3.5 h-3.5" />
+                                    <Trash className="w-3.5 h-3.5" />
                                   </Button>
                                 </ConfirmAction>
                               </div>
@@ -1185,7 +1185,7 @@ export default function AdminClient() {
                         <TableRow>
                           <TableCell colSpan={3} className="py-16 text-center">
                             <div className="flex flex-col items-center gap-2 opacity-30">
-                              <LucideBuilding className="w-10 h-10" />
+                              <Building className="w-10 h-10" />
                               <span className="text-[10px] font-black uppercase tracking-widest">Nenhuma empresa encontrada</span>
                             </div>
                           </TableCell>
@@ -1200,7 +1200,7 @@ export default function AdminClient() {
                   {filteredCompanies.length === 0 ? (
                     <div className="py-16 text-center">
                       <div className="flex flex-col items-center gap-2 opacity-30">
-                        <LucideBuilding className="w-10 h-10" />
+                        <Building className="w-10 h-10" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Nenhuma empresa encontrada</span>
                       </div>
                     </div>
@@ -1219,11 +1219,11 @@ export default function AdminClient() {
                               </div>
                               <div className="flex gap-1 ml-2">
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openCompModal(comp)}>
-                                  <LucideEdit className="w-4 h-4" />
+                                  <Edit className="w-4 h-4" />
                                 </Button>
                                 <ConfirmAction onConfirm={() => handleDeleteCompany(comp.id)} title="Excluir Empresa?">
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                    <LucideTrash className="w-4 h-4" />
+                                    <Trash className="w-4 h-4" />
                                   </Button>
                                 </ConfirmAction>
                               </div>
@@ -1242,7 +1242,7 @@ export default function AdminClient() {
                                   setIsSectorModalOpen(true);
                                 }}
                               >
-                                <LucidePlus className="w-3 h-3 mr-1" /> Novo
+                                <Plus className="w-3 h-3 mr-1" /> Novo
                               </Button>
                             </div>
                             {companySectors.length > 0 ? (
@@ -1256,14 +1256,14 @@ export default function AdminClient() {
                                         className="h-6 w-6 rounded-md hover:bg-primary/20 hover:text-primary transition-all flex items-center justify-center"
                                         title="Editar Setor"
                                       >
-                                        <LucideEdit className="w-3 h-3" />
+                                        <Edit className="w-3 h-3" />
                                       </button>
                                       <ConfirmAction onConfirm={() => handleDeleteSector(s.id)} title="Excluir Setor?">
                                         <button
                                           className="h-6 w-6 rounded-md hover:bg-destructive/20 hover:text-destructive transition-all flex items-center justify-center"
                                           title="Excluir Setor"
                                         >
-                                          <LucideTrash className="w-3 h-3" />
+                                          <Trash className="w-3 h-3" />
                                         </button>
                                       </ConfirmAction>
                                     </div>
@@ -1272,7 +1272,7 @@ export default function AdminClient() {
                               </div>
                             ) : (
                               <div className="py-4 text-center border border-dashed border-border/50 rounded-lg bg-muted/10">
-                                <LucideLayers className="w-5 h-5 mx-auto mb-1 opacity-20" />
+                                <Layers className="w-5 h-5 mx-auto mb-1 opacity-20" />
                                 <span className="text-[9px] text-muted-foreground italic font-medium block">Nenhum setor cadastrado</span>
                               </div>
                             )}
@@ -1297,7 +1297,7 @@ export default function AdminClient() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <div className="relative w-full sm:w-auto">
-                    <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Buscar..."
@@ -1309,7 +1309,7 @@ export default function AdminClient() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="icon" onClick={() => openSectorModal()} className="rounded-xl shrink-0" disabled={companies.length === 0}>
-                        <LucidePlus className="w-4 h-4" />
+                        <Plus className="w-4 h-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Novo Setor</TooltipContent>
@@ -1319,7 +1319,7 @@ export default function AdminClient() {
               <CardContent>
                 {companies.length === 0 ? (
                   <div className="py-20 text-center space-y-4 font-black uppercase tracking-widest opacity-50 text-[10px]">
-                    <LucideBuilding className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                    <Building className="w-10 h-10 mx-auto mb-2 opacity-20" />
                     Cadastre uma empresa primeiro
                   </div>
                 ) : (
@@ -1341,11 +1341,11 @@ export default function AdminClient() {
                               <TableCell className="text-xs text-muted-foreground">{sec.empresa?.nome}</TableCell>
                               <TableCell className="text-right">
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openSectorModal(sec)}>
-                                  <LucideEdit className="w-3 h-4" />
+                                  <Edit className="w-3 h-4" />
                                 </Button>
                                 <ConfirmAction onConfirm={() => handleDeleteSector(sec.id)} title="Excluir Setor?">
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                    <LucideTrash className="w-3 h-4" />
+                                    <Trash className="w-3 h-4" />
                                   </Button>
                                 </ConfirmAction>
                               </TableCell>
@@ -1367,11 +1367,11 @@ export default function AdminClient() {
                               </div>
                               <div className="flex gap-1 shrink-0">
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openSectorModal(sec)}>
-                                  <LucideEdit className="w-4 h-4" />
+                                  <Edit className="w-4 h-4" />
                                 </Button>
                                 <ConfirmAction onConfirm={() => handleDeleteSector(sec.id)} title="Excluir Setor?">
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                    <LucideTrash className="w-4 h-4" />
+                                    <Trash className="w-4 h-4" />
                                   </Button>
                                 </ConfirmAction>
                               </div>
@@ -1391,7 +1391,7 @@ export default function AdminClient() {
           return (
             <div className="py-20 text-center space-y-6 animate-scale-in">
               <div className="w-20 h-20 bg-primary/5 rounded-3xl flex items-center justify-center mx-auto border border-primary/10 shadow-inner">
-                <LucideBuilding className="w-10 h-10 text-primary opacity-40" />
+                <Building className="w-10 h-10 text-primary opacity-40" />
               </div>
               <div className="max-w-sm mx-auto space-y-2">
                 <h3 className="text-xl font-black uppercase tracking-tighter">Acesso Bloqueado</h3>
@@ -1433,7 +1433,7 @@ export default function AdminClient() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <div className="relative w-full sm:w-auto">
-                    <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Buscar por nome, setor ou empresa..."
@@ -1459,7 +1459,7 @@ export default function AdminClient() {
                           >
                             {isSeedingEmployees
                               ? <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" />
-                              : <LucideUsers className="w-4 h-4" />}
+                              : <Users className="w-4 h-4" />}
                           </Button>
                         </ConfirmAction>
                       </span>
@@ -1469,7 +1469,7 @@ export default function AdminClient() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button size="icon" onClick={() => openEmpModal()} className="rounded-xl shrink-0" disabled={sectors.length === 0}>
-                        <LucidePlus className="w-4 h-4" />
+                        <Plus className="w-4 h-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Novo Funcionário</TooltipContent>
@@ -1488,7 +1488,7 @@ export default function AdminClient() {
                       description="Isto removerá permanentemente todos os funcionários sem vínculo de empresa ou setor."
                     >
                       <Button size="icon" variant="outline" className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive/5 shrink-0">
-                        <LucideTrash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </ConfirmAction>
                   )}
@@ -1507,10 +1507,10 @@ export default function AdminClient() {
                         onClick={() => toggleCompany(compName)}
                       >
                         <div className="p-1.5 rounded-lg bg-primary/10 text-primary transition-transform duration-200">
-                          {isExpanded ? <LucideChevronDown className="w-4 h-4" /> : <LucideChevronRight className="w-4 h-4" />}
+                          {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                         </div>
                         <div className="flex items-center gap-2">
-                          <LucideBuilding className="w-4 h-4 text-muted-foreground" />
+                          <Building className="w-4 h-4 text-muted-foreground" />
                           <h3 className="text-sm font-black uppercase tracking-wider text-muted-foreground">{compName}</h3>
                         </div>
                         <Badge variant="secondary" className="ml-auto text-[10px] font-bold">
@@ -1543,7 +1543,7 @@ export default function AdminClient() {
                                         onClick={() => openEmpModal(emp)}
                                         title="Editar"
                                       >
-                                        <LucideEdit className="w-3 h-3" />
+                                        <Edit className="w-3 h-3" />
                                       </Button>
                                       <ConfirmAction onConfirm={() => handleDeleteEmployee(emp.id)} title="Excluir Funcionário?">
                                         <Button
@@ -1552,7 +1552,7 @@ export default function AdminClient() {
                                           className="h-6 w-6 text-muted-foreground hover:text-destructive"
                                           title="Excluir"
                                         >
-                                          <LucideTrash className="w-3 h-3" />
+                                          <Trash className="w-3 h-3" />
                                         </Button>
                                       </ConfirmAction>
                                     </div>
@@ -1625,12 +1625,12 @@ export default function AdminClient() {
                                       onClick={() => setRenamingUser({ id: u.id, value: u.username })}
                                       className="opacity-0 group-hover/name:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
                                     >
-                                      <LucideEdit className="w-3 h-3" />
+                                      <Edit className="w-3 h-3" />
                                     </button>
                                   </div>
                                 )}
                                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                  <LucideMail className="w-3 h-3" /> {u.email || '-'}
+                                  <Mail className="w-3 h-3" /> {u.email || '-'}
                                 </span>
                               </div>
                             </div>
@@ -1638,13 +1638,13 @@ export default function AdminClient() {
                           <TableCell>
                             {u.role === 'pendente' ? (
                               <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-orange-500/30 text-orange-500 bg-orange-500/5">
-                                <LucideClock className="w-3 h-3 mr-1" /> Pendente
+                                <Clock className="w-3 h-3 mr-1" /> Pendente
                               </Badge>
                             ) : (
                               <div className="flex flex-col gap-1 items-start">
                                 <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'border-primary/30 text-primary bg-primary/5' : 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5'
                                   }`}>
-                                  <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
+                                  <UserCheck className="w-3 h-3 mr-1" /> {u.role}
                                 </Badge>
                                 {u.role === 'educador' && (
                                   <div className="flex flex-wrap gap-1 mt-1">
@@ -1667,7 +1667,7 @@ export default function AdminClient() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => openAccessModal(u)}>
-                                        <LucideKey className="w-4 h-4" />
+                                        <Key className="w-4 h-4" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Configurar acessos</TooltipContent>
@@ -1676,7 +1676,7 @@ export default function AdminClient() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950" onClick={() => updateUserRole(u.id, 'educador')}>
-                                        <LucideUserPlus className="w-4 h-4" />
+                                        <UserPlus className="w-4 h-4" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Promover a educador</TooltipContent>
@@ -1686,7 +1686,7 @@ export default function AdminClient() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => updateUserRole(u.id, 'admin')}>
-                                        <LucideShieldCheck className="w-4 h-4" />
+                                        <ShieldCheck className="w-4 h-4" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Promover a admin</TooltipContent>
@@ -1696,7 +1696,7 @@ export default function AdminClient() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => openUserCompModal(u)}>
-                                        <LucideBuilding2 className="w-4 h-4" />
+                                        <Building2 className="w-4 h-4" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Gerenciar empresas</TooltipContent>
@@ -1706,7 +1706,7 @@ export default function AdminClient() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-amber-500" onClick={() => updateUserRole(u.id, 'pendente')}>
-                                        <LucideUserX className="w-4 h-4" />
+                                        <UserX className="w-4 h-4" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Bloquear usuário</TooltipContent>
@@ -1716,7 +1716,7 @@ export default function AdminClient() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => forceUserLogout(u.id, u.username)}>
-                                        <LucideLogOut className="w-4 h-4" />
+                                        <LogOut className="w-4 h-4" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Encerrar sessão</TooltipContent>
@@ -1728,7 +1728,7 @@ export default function AdminClient() {
                                       <TooltipTrigger asChild>
                                         <PopoverTrigger asChild>
                                           <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                            <LucideTrash2 className="w-4 h-4" />
+                                            <Trash2 className="w-4 h-4" />
                                           </Button>
                                         </PopoverTrigger>
                                       </TooltipTrigger>
@@ -1766,57 +1766,57 @@ export default function AdminClient() {
                             <div className="flex-1 min-w-0">
                               <CardTitle className="text-sm font-bold mb-1">{u.username}</CardTitle>
                               <CardDescription className="text-xs flex items-center gap-1">
-                                <LucideMail className="w-3 h-3" /> {u.email || '-'}
+                                <Mail className="w-3 h-3" /> {u.email || '-'}
                               </CardDescription>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {u.role === 'pendente' ? (
                               <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-orange-500/30 text-orange-500 bg-orange-500/5">
-                                <LucideClock className="w-3 h-3 mr-1" /> Pendente
+                                <Clock className="w-3 h-3 mr-1" /> Pendente
                               </Badge>
                             ) : (
                               <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest ${u.role === 'admin' ? 'border-primary/30 text-primary bg-primary/5' : 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5'
                                 }`}>
-                                <LucideUserCheck className="w-3 h-3 mr-1" /> {u.role}
+                                <UserCheck className="w-3 h-3 mr-1" /> {u.role}
                               </Badge>
                             )}
                           </div>
                           <div className="flex items-center gap-1 pt-2 border-t border-border/50">
                             {u.role === 'educador' ? (
                               <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-600" title="Configurar acessos" onClick={() => openAccessModal(u)}>
-                                <LucideKey className="w-4 h-4" />
+                                <Key className="w-4 h-4" />
                               </Button>
                             ) : (
                               <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-600" title="Promover a educador" onClick={() => updateUserRole(u.id, 'educador')}>
-                                <LucideUserPlus className="w-4 h-4" />
+                                <UserPlus className="w-4 h-4" />
                               </Button>
                             )}
                             {u.role !== 'admin' && (
                               <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" title="Promover a admin" onClick={() => updateUserRole(u.id, 'admin')}>
-                                <LucideShieldCheck className="w-4 h-4" />
+                                <ShieldCheck className="w-4 h-4" />
                               </Button>
                             )}
                             {u.role === 'educador' && (
                               <Button size="icon" variant="ghost" className="h-9 w-9 text-primary" title="Gerenciar empresas" onClick={() => openUserCompModal(u)}>
-                                <LucideBuilding2 className="w-4 h-4" />
+                                <Building2 className="w-4 h-4" />
                               </Button>
                             )}
                             {u.role !== 'pendente' && (
                               <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-amber-500" title="Bloquear usuário" onClick={() => updateUserRole(u.id, 'pendente')}>
-                                <LucideUserX className="w-4 h-4" />
+                                <UserX className="w-4 h-4" />
                               </Button>
                             )}
                             {u.role !== 'admin' && (
                               <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive" title="Encerrar sessão" onClick={() => forceUserLogout(u.id, u.username)}>
-                                <LucideLogOut className="w-4 h-4" />
+                                <LogOut className="w-4 h-4" />
                               </Button>
                             )}
                             {u.role !== 'admin' && (
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive" title="Excluir usuário">
-                                    <LucideTrash2 className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-56 p-3" side="top">
@@ -1850,7 +1850,7 @@ export default function AdminClient() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button onClick={() => loadReports(1)} size="icon" variant="outline" className="h-9 w-9 rounded-xl">
-                      <LucideClock className="w-4 h-4" />
+                      <Clock className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Atualizar</TooltipContent>
@@ -1868,7 +1868,7 @@ export default function AdminClient() {
                     a.click();
                   }}
                 >
-                  <LucideFileText className="w-4 h-4" />
+                  <FileText className="w-4 h-4" />
                 </Button>
                   </TooltipTrigger>
                   <TooltipContent>Exportar CSV</TooltipContent>
@@ -1899,7 +1899,7 @@ export default function AdminClient() {
                     />
                   </div>
                   <div className="relative flex-1 min-w-[140px]">
-                    <LucideBuilding className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                    <Building className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Empresa..."
@@ -1909,7 +1909,7 @@ export default function AdminClient() {
                     />
                   </div>
                   <div className="relative flex-1 min-w-[140px]">
-                    <LucideLayers className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                    <Layers className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Setor..."
@@ -1922,7 +1922,7 @@ export default function AdminClient() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button size="icon" className="h-8 w-8 rounded-lg" onClick={() => loadReports(1, reportFilter)}>
-                          <LucideFilter className="w-3.5 h-3.5" />
+                          <Filter className="w-3.5 h-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Filtrar</TooltipContent>
@@ -1935,7 +1935,7 @@ export default function AdminClient() {
                             setReportFilter(empty);
                             loadReports(1, empty);
                           }}>
-                          <LucideX className="w-3.5 h-3.5" />
+                          <X className="w-3.5 h-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Limpar filtros</TooltipContent>
@@ -2001,7 +2001,7 @@ export default function AdminClient() {
                                   if (res.ok) loadReports(reportPage);
                                 }}
                               >
-                                <LucideTrash className="w-4 h-4" />
+                                <Trash className="w-4 h-4" />
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -2049,7 +2049,7 @@ export default function AdminClient() {
                                 if (res.ok) loadReports(reportPage);
                               }}
                             >
-                              <LucideTrash className="w-4 h-4" />
+                              <Trash className="w-4 h-4" />
                             </Button>
                           </div>
                           <div className="pt-3 border-t border-border/50 space-y-1">
@@ -2078,12 +2078,12 @@ export default function AdminClient() {
                   <Button size="sm" variant="outline" className="h-8 rounded-lg font-black text-[10px] uppercase"
                     disabled={reportPage === 1 || isLoadingReports}
                     onClick={() => loadReports(reportPage - 1)}>
-                    <LucideChevronRight className="w-3 h-3 rotate-180" />
+                    <ChevronRight className="w-3 h-3 rotate-180" />
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 rounded-lg font-black text-[10px] uppercase"
                     disabled={reportPage >= Math.ceil(reportsTotal / REPORTS_PER_PAGE) || isLoadingReports}
                     onClick={() => loadReports(reportPage + 1)}>
-                    <LucideChevronRight className="w-3 h-3" />
+                    <ChevronRight className="w-3 h-3" />
                   </Button>
                 </div>
               </div>
@@ -2101,7 +2101,7 @@ export default function AdminClient() {
               <CardContent className="pt-5 pb-5">
                 <div className="flex items-start gap-4">
                   <div className="p-3 bg-primary/15 rounded-xl shrink-0">
-                    <LucideShieldCheck className="w-6 h-6 text-primary" />
+                    <ShieldCheck className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl font-black tracking-tight mb-0.5">Presença<span className="text-primary">.Pro</span></h2>
@@ -2141,7 +2141,7 @@ export default function AdminClient() {
               <Card className="border-none shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                    <LucideCode2 className="w-4 h-4 text-blue-500" /> Stack tecnológico
+                    <Code2 className="w-4 h-4 text-blue-500" /> Stack tecnológico
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1.5">
@@ -2167,7 +2167,7 @@ export default function AdminClient() {
               <Card className="border-none shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                    <LucideShieldCheck className="w-4 h-4 text-emerald-500" /> Segurança & arquitetura
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" /> Segurança & arquitetura
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2.5">
@@ -2192,7 +2192,7 @@ export default function AdminClient() {
             <Card className="border-none shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-                  <LucideBuilding className="w-4 h-4 text-indigo-500" /> Modelos do banco de dados
+                  <Building className="w-4 h-4 text-indigo-500" /> Modelos do banco de dados
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -2221,7 +2221,7 @@ export default function AdminClient() {
               <Card className="border-l-4 border-l-primary/60 shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <LucideShieldCheck className="w-4 h-4 text-primary" /> Painel administrativo
+                    <ShieldCheck className="w-4 h-4 text-primary" /> Painel administrativo
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -2247,7 +2247,7 @@ export default function AdminClient() {
               <Card className="border-l-4 border-l-emerald-500/60 shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <LucideUserCheck className="w-4 h-4 text-emerald-500" /> Portal do educador
+                    <UserCheck className="w-4 h-4 text-emerald-500" /> Portal do educador
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -2287,7 +2287,7 @@ export default function AdminClient() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button onClick={() => loadAuditLogs(1, auditFilter)} size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0">
-                      <LucideClock className="w-4 h-4" />
+                      <Clock className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Atualizar</TooltipContent>
@@ -2312,7 +2312,7 @@ export default function AdminClient() {
                         confirmText="Limpar tudo"
                       >
                         <Button size="icon" variant="outline" className="h-9 w-9 rounded-xl shrink-0 border-destructive/30 text-destructive hover:bg-destructive/5">
-                          <LucideTrash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </ConfirmAction>
                     </span>
@@ -2366,7 +2366,7 @@ export default function AdminClient() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button size="icon" className="h-8 w-8 rounded-lg" onClick={() => loadAuditLogs(1, auditFilter)}>
-                          <LucideFilter className="w-3.5 h-3.5" />
+                          <Filter className="w-3.5 h-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Filtrar</TooltipContent>
@@ -2378,7 +2378,7 @@ export default function AdminClient() {
                           setAuditFilter(empty);
                           loadAuditLogs(1, empty);
                         }}>
-                          <LucideX className="w-3.5 h-3.5" />
+                          <X className="w-3.5 h-3.5" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Limpar filtros</TooltipContent>
@@ -2497,12 +2497,12 @@ export default function AdminClient() {
                   <Button size="sm" variant="outline" className="h-8 rounded-lg font-bold text-[10px]"
                     disabled={auditPage === 1 || isLoadingAudit}
                     onClick={() => loadAuditLogs(auditPage - 1)}>
-                    <LucideChevronRight className="w-3 h-3 rotate-180" />
+                    <ChevronRight className="w-3 h-3 rotate-180" />
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 rounded-lg font-bold text-[10px]"
                     disabled={auditPage >= Math.ceil(auditTotal / AUDIT_PER_PAGE) || isLoadingAudit}
                     onClick={() => loadAuditLogs(auditPage + 1)}>
-                    <LucideChevronRight className="w-3 h-3" />
+                    <ChevronRight className="w-3 h-3" />
                   </Button>
                 </div>
               </div>
@@ -2516,7 +2516,7 @@ export default function AdminClient() {
             <Card className="border-none shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
-                  <LucideUser className="w-4 h-4 text-primary" /> Sessão Atual
+                  <User className="w-4 h-4 text-primary" /> Sessão Atual
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -2538,7 +2538,7 @@ export default function AdminClient() {
             <Card className="border-none shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
-                  <LucideSettings className="w-4 h-4 text-primary" /> Aparência
+                  <Settings className="w-4 h-4 text-primary" /> Aparência
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -2546,9 +2546,9 @@ export default function AdminClient() {
                   <span className="text-xs text-muted-foreground">Tema</span>
                   <div className="flex items-center gap-1">
                     {[
-                      { value: 'light', label: 'Claro', icon: LucideSun },
-                      { value: 'dark', label: 'Escuro', icon: LucideMoon },
-                      { value: 'system', label: 'Sistema', icon: LucideMonitor },
+                      { value: 'light', label: 'Claro', icon: Sun },
+                      { value: 'dark', label: 'Escuro', icon: Moon },
+                      { value: 'system', label: 'Sistema', icon: Monitor },
                     ].map(({ value, label, icon: Icon }) => (
                       <button
                         key={value}
@@ -2568,7 +2568,7 @@ export default function AdminClient() {
               <Card className="border-none shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2">
-                    <LucideZap className="w-4 h-4 text-primary" /> Demo Mode
+                    <Zap className="w-4 h-4 text-primary" /> Demo Mode
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Quando ativo, novos usuários que entram pelo Google podem escolher o papel (admin ou educador) sem precisar de aprovação.
@@ -2599,7 +2599,7 @@ export default function AdminClient() {
             <Card className="border-destructive/20 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-base font-black uppercase tracking-widest flex items-center gap-2 text-destructive">
-                  <LucideLogOut className="w-4 h-4" /> Encerrar Sessão
+                  <LogOut className="w-4 h-4" /> Encerrar Sessão
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -2610,7 +2610,7 @@ export default function AdminClient() {
                   className="font-black uppercase tracking-widest text-[10px] rounded-xl"
                   onClick={() => signOut({ callbackUrl: '/login' })}
                 >
-                  <LucideLogOut className="w-4 h-4 mr-2" /> Sair do Sistema
+                  <LogOut className="w-4 h-4 mr-2" /> Sair do Sistema
                 </Button>
               </CardContent>
             </Card>
@@ -2621,7 +2621,7 @@ export default function AdminClient() {
         return (
           <Card className="border-none bg-card/40 flex flex-col items-center justify-center py-20">
             <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-4">
-              <LucideClock className="w-6 h-6 text-muted-foreground" />
+              <Clock className="w-6 h-6 text-muted-foreground" />
             </div>
             <h2 className="text-lg font-black italic opacity-50">Sessão em construção</h2>
           </Card>
@@ -2651,7 +2651,7 @@ export default function AdminClient() {
           onClick={() => setIsMobileMenuOpen(false)}
           className="lg:hidden absolute top-3 right-3 w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-all z-50"
         >
-          <LucideX className="w-3.5 h-3.5" />
+          <X className="w-3.5 h-3.5" />
         </button>
 
         {/* Collapse toggle — desktop only */}
@@ -2660,7 +2660,7 @@ export default function AdminClient() {
           className="hidden lg:flex absolute -right-3 top-14 bg-card border border-border/50 shadow-sm w-6 h-6 rounded-full items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all z-50"
           title={isSidebarCollapsed ? 'Expandir' : 'Recolher'}
         >
-          {isSidebarCollapsed ? <LucidePanelLeftOpen className="w-3 h-3" /> : <LucidePanelLeftClose className="w-3 h-3" />}
+          {isSidebarCollapsed ? <PanelLeftOpen className="w-3 h-3" /> : <PanelLeftClose className="w-3 h-3" />}
         </button>
 
         {/* User profile */}
@@ -2688,7 +2688,7 @@ export default function AdminClient() {
                     <p className="text-xs font-semibold truncate leading-tight">{session?.user?.name || 'Administrador'}</p>
                     <p className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">{session?.user?.email || ''}</p>
                   </div>
-                  <LucideChevronDown className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                  <ChevronDown className="w-3 h-3 text-muted-foreground/40 shrink-0" />
                 </button>
               )}
             </DropdownMenuTrigger>
@@ -2705,29 +2705,29 @@ export default function AdminClient() {
                 onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
                 className="cursor-pointer"
               >
-                <LucideLayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
+                <LayoutDashboard className="w-4 h-4 mr-2" /> Dashboard
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
                 className="cursor-pointer"
               >
-                <LucideSettings className="w-4 h-4 mr-2" /> Configurações
+                <Settings className="w-4 h-4 mr-2" /> Configurações
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="cursor-pointer">
-                  {theme === 'dark' ? <LucideMoon className="w-4 h-4 mr-2" /> : theme === 'light' ? <LucideSun className="w-4 h-4 mr-2" /> : <LucideMonitor className="w-4 h-4 mr-2" />}
+                  {theme === 'dark' ? <Moon className="w-4 h-4 mr-2" /> : theme === 'light' ? <Sun className="w-4 h-4 mr-2" /> : <Monitor className="w-4 h-4 mr-2" />}
                   Tema
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuItem onClick={() => setTheme('light')} className="cursor-pointer">
-                    <LucideSun className="w-4 h-4 mr-2" /> Claro
+                    <Sun className="w-4 h-4 mr-2" /> Claro
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setTheme('dark')} className="cursor-pointer">
-                    <LucideMoon className="w-4 h-4 mr-2" /> Escuro
+                    <Moon className="w-4 h-4 mr-2" /> Escuro
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setTheme('system')} className="cursor-pointer">
-                    <LucideMonitor className="w-4 h-4 mr-2" /> Sistema
+                    <Monitor className="w-4 h-4 mr-2" /> Sistema
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -2736,7 +2736,7 @@ export default function AdminClient() {
                 onClick={() => signOut({ callbackUrl: '/login' })}
                 className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
               >
-                <LucideLogOut className="w-4 h-4 mr-2" />
+                <LogOut className="w-4 h-4 mr-2" />
                 Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -2755,16 +2755,16 @@ export default function AdminClient() {
                 className="w-full flex items-center justify-between px-2 mb-1"
               >
                 <span className="text-[10px] font-medium text-muted-foreground/50 tracking-wider">Principal</span>
-                <LucideChevronDown className={`w-3 h-3 text-muted-foreground/30 transition-transform duration-200 ${navGroupOpen.principal ? '' : '-rotate-90'}`} />
+                <ChevronDown className={`w-3 h-3 text-muted-foreground/30 transition-transform duration-200 ${navGroupOpen.principal ? '' : '-rotate-90'}`} />
               </button>
             )}
             {(navGroupOpen.principal || isSidebarCollapsed) && (
               <div className="space-y-0.5">
                 {[
-                  { id: 'overview', label: 'Dashboard', icon: LucideLayoutDashboard },
-                  { id: 'companies', label: 'Empresas', icon: LucideBuilding },
-                  { id: 'employees', label: 'Funcionários', icon: LucideUsers },
-                  { id: 'users', label: 'Acessos', icon: LucideUserCheck },
+                  { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+                  { id: 'companies', label: 'Empresas', icon: Building },
+                  { id: 'employees', label: 'Funcionários', icon: Users },
+                  { id: 'users', label: 'Acessos', icon: UserCheck },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -2790,7 +2790,7 @@ export default function AdminClient() {
                 className="w-full flex items-center justify-between px-2 mb-1"
               >
                 <span className="text-[10px] font-medium text-muted-foreground/50 tracking-wider">Sistema</span>
-                <LucideChevronDown className={`w-3 h-3 text-muted-foreground/30 transition-transform duration-200 ${navGroupOpen.sistema ? '' : '-rotate-90'}`} />
+                <ChevronDown className={`w-3 h-3 text-muted-foreground/30 transition-transform duration-200 ${navGroupOpen.sistema ? '' : '-rotate-90'}`} />
               </button>
             ) : (
               <div className="border-t border-border/30 mb-1.5" />
@@ -2798,10 +2798,10 @@ export default function AdminClient() {
             {(navGroupOpen.sistema || isSidebarCollapsed) && (
               <div className="space-y-0.5">
                 {[
-                  { id: 'reports', label: 'Relatórios', icon: LucideFileText },
-                  { id: 'audit', label: 'Auditoria', icon: LucideClipboardList },
-                  { id: 'settings', label: 'Configurações', icon: LucideSettings },
-                  { id: 'about', label: 'Sobre', icon: LucideInfo },
+                  { id: 'reports', label: 'Relatórios', icon: FileText },
+                  { id: 'audit', label: 'Auditoria', icon: ClipboardList },
+                  { id: 'settings', label: 'Configurações', icon: Settings },
+                  { id: 'about', label: 'Sobre', icon: Info },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -2834,7 +2834,7 @@ export default function AdminClient() {
                   className="lg:hidden w-10 h-10 rounded-xl bg-muted/50 hover:bg-muted flex items-center justify-center text-foreground transition-all shrink-0"
                   aria-label="Abrir menu"
                 >
-                  <LucideMenu className="w-5 h-5" />
+                  <Menu className="w-5 h-5" />
                 </button>
                 <div className="min-w-0">
                   <h1 className="flex items-center gap-2 text-lg sm:text-xl lg:text-2xl font-black wrap-break-word">
@@ -2862,7 +2862,7 @@ export default function AdminClient() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LucideUser className="w-5 h-5 text-primary" />
+              <User className="w-5 h-5 text-primary" />
               {editingEmp ? 'Editar Funcionário' : 'Novo Funcionário'}
             </DialogTitle>
           </DialogHeader>
@@ -2916,7 +2916,7 @@ export default function AdminClient() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LucideLayers className="w-5 h-5 text-primary" />
+              <Layers className="w-5 h-5 text-primary" />
               {editingSector ? 'Editar Setor' : 'Novo Setor'}
             </DialogTitle>
           </DialogHeader>
@@ -2970,7 +2970,7 @@ export default function AdminClient() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LucideBuilding className="w-5 h-5 text-primary" />
+              <Building className="w-5 h-5 text-primary" />
               {editingComp ? 'Editar Empresa' : 'Nova Empresa'}
             </DialogTitle>
           </DialogHeader>
@@ -3000,14 +3000,14 @@ export default function AdminClient() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LucideShieldCheck className="w-5 h-5 text-primary" />
+              <ShieldCheck className="w-5 h-5 text-primary" />
               Controle de Acessos
             </DialogTitle>
             <DialogDescription>Permissões de empresa para <b>{selectedUser?.username}</b>.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="relative">
-              <LucideSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 className="pl-8 h-8 text-xs"
                 placeholder="Buscar empresa..."
@@ -3049,7 +3049,7 @@ export default function AdminClient() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LucideShieldCheck className="w-5 h-5 text-emerald-500" />
+              <ShieldCheck className="w-5 h-5 text-emerald-500" />
               Permissões de Educador
             </DialogTitle>
             <DialogDescription>Configure o que <b>{selectedUser?.username}</b> pode fazer.</DialogDescription>

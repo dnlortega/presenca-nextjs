@@ -1,17 +1,17 @@
-// github.com/dnlortega
+﻿// github.com/dnlortega
 // linkedin.com/in/daniel-op
 "use client";
 import React, { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  LucideShieldCheck,
-  LucideUser,
-  LucideLock,
-  LucideArrowRight,
-  LucideAlertCircle,
-  LucideEye,
-  LucideEyeOff,
+  ShieldCheck,
+  User,
+  Lock,
+  ArrowRight,
+  AlertCircle,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 import { Button } from "../../components/ui/button";
@@ -58,7 +58,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 text-center text-primary-foreground space-y-6 max-w-xs">
           <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto backdrop-blur-sm border border-white/20 shadow-2xl animate-float">
-            <LucideShieldCheck className="w-10 h-10 text-white" />
+            <ShieldCheck className="w-10 h-10 text-white" />
           </div>
           <div>
             <h1 className="text-4xl font-black tracking-tighter">
@@ -101,7 +101,7 @@ export default function LoginPage() {
           {/* Header mobile */}
           <div className="lg:hidden text-center space-y-2">
             <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground shadow-xl shadow-primary/20 mx-auto animate-float">
-              <LucideShieldCheck className="w-8 h-8" />
+              <ShieldCheck className="w-8 h-8" />
             </div>
             <h1 className="text-3xl font-black tracking-tighter">
               Presença<span className="text-primary italic">.Pro</span>
@@ -118,7 +118,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="flex items-center gap-2.5 bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium p-3 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-                <LucideAlertCircle className="w-4 h-4 shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
             )}
@@ -128,7 +128,7 @@ export default function LoginPage() {
                 Usuário
               </Label>
               <div className="relative group">
-                <LucideUser className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
                 <Input
                   required
                   type="text"
@@ -145,7 +145,7 @@ export default function LoginPage() {
                 Senha
               </Label>
               <div className="relative group">
-                <LucideLock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10" />
                 <Input
                   required
                   type={showPassword ? 'text' : 'password'}
@@ -160,7 +160,7 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(v => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showPassword ? <LucideEyeOff className="w-4 h-4" /> : <LucideEye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function LoginPage() {
               {loading ? (
                 <div className="animate-spin w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full" />
               ) : (
-                <>Acessar Painel <LucideArrowRight className="w-4 h-4 ml-2" /></>
+                <>Acessar Painel <ArrowRight className="w-4 h-4 ml-2" /></>
               )}
             </Button>
           </form>
