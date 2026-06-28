@@ -106,19 +106,23 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         async signIn({ user, account }) {
             if (account?.provider === 'google' && user.email) {
-                const existingUser = await prisma.usuarios.findUnique({
-                    where: { email: user.email }
-                });
-
-                if (!existingUser) {
-                    await prisma.usuarios.create({
-                        data: {
-                            email: user.email,
-                            username: user.email.split('@')[0],
-                            role: 'pendente',
-                            can_register: false
-                        }
+                try {
+                    const existingUser = await prisma.usuarios.findUnique({
+                        where: { email: user.email }
                     });
+                    if (!existingUser) {
+                        await prisma.usuarios.create({
+                            data: {
+                                email: user.email,
+                                username: user.email.split('@')[0],
+                                role: 'pendente',
+                                can_register: false
+                            }
+                        });
+                    }
+                } catch (err) {
+                    // Log but don't block login if DB is temporarily unreachable
+                    console.error('DB error during Google signIn:', err);
                 }
             }
             return true;
