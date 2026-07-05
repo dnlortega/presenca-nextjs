@@ -15,6 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
   title: "Presença Pro",
   description: "Controle inteligente de frequência",
   appleWebApp: {
