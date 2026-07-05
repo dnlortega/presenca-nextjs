@@ -6,6 +6,7 @@ import "./globals.css";
 import SessionProviderWrapper from "../components/SessionProviderWrapper";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { Toaster } from "../components/ui/sonner";
+import SWRegistration from "../components/SWRegistration";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -53,6 +54,7 @@ export default function RootLayout({
             {children}
             <Toaster />
           </SessionProviderWrapper>
+          <SWRegistration />
         </ThemeProvider>
       </body>
     </html>
